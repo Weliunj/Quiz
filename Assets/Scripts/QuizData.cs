@@ -48,19 +48,22 @@ namespace QuizGame
     {
         public string id;
         public string mapName;
+        public int stationCount = 5; // Số lượng trạm / tầng leo đến đỉnh núi
         public List<QuestionData> questions = new List<QuestionData>();
 
         public MapData()
         {
             id = Guid.NewGuid().ToString();
             mapName = "Bản đồ mới";
+            stationCount = 5;
             questions = new List<QuestionData>();
         }
 
-        public MapData(string name)
+        public MapData(string name, int stations = 5)
         {
             id = Guid.NewGuid().ToString();
             mapName = name;
+            stationCount = Mathf.Max(1, stations);
             questions = new List<QuestionData>();
         }
     }

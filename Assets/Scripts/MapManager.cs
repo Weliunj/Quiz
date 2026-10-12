@@ -16,6 +16,9 @@ namespace QuizGame
         [Tooltip("Panel tạo và chỉnh sửa câu hỏi cho map")]
         [SerializeField] private EditMapPanelUI editPanel;
 
+        [Tooltip("Hệ thống sinh trạm leo núi khi bấm Play")]
+        [SerializeField] private MountainStationManager mountainManager;
+
         [Header("--- NÚT BẤM (BUTTONS) ---")]
         [Tooltip("Nút Start ở màn hình chính để vào chọn map")]
         [SerializeField] private Button startBtn;
@@ -269,11 +272,38 @@ namespace QuizGame
                 onEdit: (data) => OpenEditMap(data),
                 onPlay: (data) =>
                 {
-                    Debug.Log($"[MapManager] Bắt đầu chơi: {data.mapName} (Số câu hỏi: {data.questions.Count})");
+                    StartGameOnMap(data);
                 }
             );
 
             return mapObj;
+        }
+
+        public void StartGameOnMap(MapData mapData)
+        {
+            if (mapData == null) return;
+
+            if (mapPanel != null) mapPanel.SetActive(false);
+
+            if (mountainManager == null)
+            {
+                mountainManager = FindFirstObjectByType<MountainStationManager>();
+                if (mountainManager == null)
+                {
+                    Canvas canvas = FindFirstObjectByType<Canvas>();
+                    GameObject obj = new GameObject("MountainStationManager", typeof(RectTransform));
+                    if (canvas != null) obj.transform.SetParent(canvas.transform, false);
+                    mountainManager = obj.AddComponent<MountainStationManager>();
+                }
+            }
+
+            mountainManager.OpenMountain(mapData, () =>
+            {
+                // Khi bấm Back từ màn hình leo núi -> bật lại MapManagerPanel
+                if (mapPanel != null) mapPanel.SetActive(true);
+                RefreshMapListUI();
+                StartCoroutine(InitSnapRoutine());
+            });
         }
 
         private System.Collections.IEnumerator InitSnapRoutine()

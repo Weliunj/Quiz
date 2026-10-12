@@ -22,6 +22,28 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-12 21:55] — feat(gameplay): implement mountain station layers spawning on play with custom station count and random trail offsets
+- **Tác vụ**:
+  - Cập nhật [QuizData.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/QuizData.cs):
+    - Thêm trường `stationCount` vào cấu trúc `MapData` để lưu trữ số lượng trạm (tầng) cần đi qua để đến đỉnh núi cho từng bản đồ.
+  - Cập nhật [EditMapPanelUI.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/EditMapPanelUI.cs):
+    - Tích hợp cụm `Other` gồm 2 ô nhập: `NumberStations` (số lượng tầng trạm) và `NameLevel` (tên bản đồ).
+    - Tự động nạp, cập nhật và lưu trữ tức thì cả 2 giá trị này vào file JSON khi người dùng nhập liệu hoặc lưu chỉnh sửa.
+  - Tạo mới [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - Khi bấm Play từ thẻ Map: Tự động tính toán và sinh ra các trạm theo từng tầng (layer) leo từ chân núi lên đỉnh núi.
+    - Mỗi index là một tầng với cao độ Y tăng dần đều, tọa độ ngang X được random đảo hướng uốn lượn tự nhiên tạo thành con đường mòn ngoằn ngoèo leo dốc.
+    - Trạm cuối cùng (`index = stationCount - 1`) là Trạm Đỉnh Núi (`🏔️ ĐỈNH NÚI`) với màu vàng kim nổi bật ở trung tâm trên cùng.
+    - Tự động vẽ các vệt đường nối (trail line) giữa các trạm liền kề và hỗ trợ cuộn màn hình mượt mà từ chân núi lên đỉnh núi.
+    - Tích hợp nút `Quay Lại` để thoát ra và trở về màn hình chọn map bất cứ lúc nào.
+  - Cập nhật [MapManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MapManager.cs):
+    - Khi bấm Play trên bất kỳ thẻ map nào, tự động gọi `StartGameOnMap` để chuyển sang màn hình leo núi của bản đồ đó.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuizData.cs` (lines 48-66 modified)
+  - `Assets/Scripts/EditMapPanelUI.cs` (lines 100-115, 275-310, 385-415, 500-520, 740-755 modified)
+  - `Assets/Scripts/MountainStationManager.cs` (file mới tạo)
+  - `Assets/Scripts/MapManager.cs` (lines 16-22, 270-305 modified)
+- **Ảnh hưởng**: Hoàn thiện tính năng cốt lõi cho gameplay: người dùng tự cấu hình số lượng trạm/tầng trong Edit map, khi bấm Play game sẽ sinh đường mòn leo núi theo đúng số tầng với các trạm uốn lượn ngẫu nhiên dẫn lên đỉnh núi.
+
 ### [2026-10-12 19:51] — fix(navigation): restore MapManagerPanel and snap view when clicking Back from EditMapPanel
 - **Tác vụ**:
   - Cập nhật [EditMapPanelUI.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/EditMapPanelUI.cs):

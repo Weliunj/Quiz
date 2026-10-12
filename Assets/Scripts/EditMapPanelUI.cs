@@ -99,6 +99,16 @@ namespace QuizGame
         [Tooltip("Nút xóa câu hỏi đang chọn khỏi map (DeleteQuest)")]
         [SerializeField] private Button deleteBtn;
 
+        [Header("--- THÔNG TIN KHÁC (OTHER) ---")]
+        [Tooltip("Khu vực chứa thông tin khác (Other)")]
+        [SerializeField] private GameObject otherArea;
+
+        [Tooltip("Ô nhập số lượng trạm đến đỉnh núi (NumberStations)")]
+        [SerializeField] private TMP_InputField numberStationsInput;
+
+        [Tooltip("Ô nhập tên màn chơi (NameLevel)")]
+        [SerializeField] private TMP_InputField nameLevelInput;
+
         [Header("--- ĐIỀU HƯỚNG ---")]
         [Tooltip("Nút đóng bảng soạn câu hỏi và quay về Map Manager")]
         [SerializeField] private Button backBtn;
@@ -278,6 +288,34 @@ namespace QuizGame
             if (editQuestBtn == null) editQuestBtn = FindButtonFlexible(transform, "EditQuestBtn", "EditQuest", "EditBtn", "EditButton");
             if (deleteBtn == null) deleteBtn = FindButtonFlexible(transform, "DeleteQuest", "DeleteQuestBtn", "DeleteQuestionButton", "DeleteBtn");
 
+            // Tìm cụm Other (NumberStations và NameLevel)
+            if (otherArea == null)
+            {
+                Transform t = FindChildTransform(transform, "Other", "OtherSettings", "MapSettings");
+                if (t != null) otherArea = t.gameObject;
+            }
+
+            Transform otherRoot = otherArea != null ? otherArea.transform : transform;
+            if (numberStationsInput == null)
+            {
+                numberStationsInput = FindInputFieldFlexible(otherRoot, "NumberStations/InputField (TMP)", "NumberStations", "StationCount", "Stations");
+                if (numberStationsInput == null)
+                {
+                    Transform t = FindChildTransform(otherRoot, "NumberStations");
+                    if (t != null) numberStationsInput = t.GetComponentInChildren<TMP_InputField>(true);
+                }
+            }
+
+            if (nameLevelInput == null)
+            {
+                nameLevelInput = FindInputFieldFlexible(otherRoot, "NameLevel/InputField (TMP)", "NameLevel", "LevelName", "MapName");
+                if (nameLevelInput == null)
+                {
+                    Transform t = FindChildTransform(otherRoot, "NameLevel");
+                    if (t != null) nameLevelInput = t.GetComponentInChildren<TMP_InputField>(true);
+                }
+            }
+
             // Tìm nút Back
             if (backBtn == null) backBtn = FindButtonFlexible(transform, "BackBtn", "BackButton", "CloseBtn", "CloseButton");
         }
@@ -386,6 +424,33 @@ namespace QuizGame
             {
                 correctDropdown.onValueChanged.RemoveAllListeners();
                 correctDropdown.onValueChanged.AddListener(val => SetCorrectAnswer(val));
+            }
+
+            // Gán sự kiện thay đổi tên map và số lượng trạm
+            if (nameLevelInput != null)
+            {
+                nameLevelInput.onEndEdit.RemoveAllListeners();
+                nameLevelInput.onEndEdit.AddListener(val =>
+                {
+                    if (currentMap != null && !string.IsNullOrWhiteSpace(val))
+                    {
+                        currentMap.mapName = val.Trim();
+                        SaveData();
+                    }
+                });
+            }
+
+            if (numberStationsInput != null)
+            {
+                numberStationsInput.onEndEdit.RemoveAllListeners();
+                numberStationsInput.onEndEdit.AddListener(val =>
+                {
+                    if (currentMap != null && int.TryParse(val, out int count))
+                    {
+                        currentMap.stationCount = Mathf.Max(1, count);
+                        SaveData();
+                    }
+                });
             }
         }
 
@@ -505,6 +570,16 @@ namespace QuizGame
             gameObject.SetActive(true);
             ClearInputs();
             HideGuidePanel();
+
+            // Hiển thị tên màn chơi và số lượng trạm
+            if (nameLevelInput != null)
+            {
+                nameLevelInput.text = currentMap.mapName;
+            }
+            if (numberStationsInput != null)
+            {
+                numberStationsInput.text = (currentMap.stationCount <= 0 ? 5 : currentMap.stationCount).ToString();
+            }
 
             // Mặc định mở CreateQuestion theo yêu cầu
             ShowCreateQuestionMode();
@@ -744,6 +819,17 @@ namespace QuizGame
 
         private void SaveData()
         {
+            if (currentMap != null)
+            {
+                if (nameLevelInput != null && !string.IsNullOrWhiteSpace(nameLevelInput.text))
+                {
+                    currentMap.mapName = nameLevelInput.text.Trim();
+                }
+                if (numberStationsInput != null && int.TryParse(numberStationsInput.text, out int count))
+                {
+                    currentMap.stationCount = Mathf.Max(1, count);
+                }
+            }
             onDataChangedCallback?.Invoke();
         }
 
