@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,42 +6,133 @@ namespace QuizGame
 {
     public class MapManager : MonoBehaviour
     {
-        [Header("--- PANELS ---")]
+        [Header("--- CÁC BẢNG GIAO DIỆN (PANELS) ---")]
         [Tooltip("Panel màn hình chính")]
-        [SerializeField] private GameObject homeMenuPanel;
+        [SerializeField] private GameObject homePanel;
 
-        [Tooltip("Panel quản lý bản đồ (chứa danh sách map và nút +)")]
-        [SerializeField] private GameObject mapManagerPanel;
+        [Tooltip("Panel quản lý và chọn các map")]
+        [SerializeField] private GameObject mapPanel;
 
-        [Header("--- BUTTONS ---")]
-        [Tooltip("Nút Start ở HomeMenuPanel")]
+        [Tooltip("Panel tạo và chỉnh sửa câu hỏi cho map")]
+        [SerializeField] private EditMapPanelUI editPanel;
+
+        [Header("--- NÚT BẤM (BUTTONS) ---")]
+        [Tooltip("Nút Start ở màn hình chính để vào chọn map")]
         [SerializeField] private Button startBtn;
 
-        [Tooltip("Nút dấu cộng '+' để tạo/thêm map")]
+        [Tooltip("Nút dấu '+' để tạo thêm map mới")]
         [SerializeField] private Button addMapBtn;
 
-        [Tooltip("Nút quay lại Home (tùy chọn)")]
+        [Tooltip("Nút quay lại màn hình chính Home")]
         [SerializeField] private Button backBtn;
 
-        [Header("--- MAP CONTENT ---")]
-        [Tooltip("Vùng chứa các map (LevelContent)")]
+        [Header("--- DANH SÁCH BẢN ĐỒ (MAPS) ---")]
+        [Tooltip("Vùng chứa danh sách các thẻ map (LevelContent) trong Scroll View")]
         [SerializeField] private Transform levelContent;
 
-        [Tooltip("Prefab hoặc GameObject mẫu thẻ Map")]
-        [SerializeField] private GameObject mapItemPrefab;
+        [Tooltip("Prefab thẻ hiển thị bản đồ (MapContent.prefab)")]
+        [SerializeField] private GameObject mapPrefab;
 
-        [Header("--- SCROLL & CĂN GIỮA ---")]
-        [Tooltip("Component hỗ trợ cuộn ngang và tự động căn giữa")]
-        [SerializeField] private CenterSnapScroll centerSnapScroll;
+        [Tooltip("Component hỗ trợ cuộn chuột ngang và tự động căn giữa")]
+        [SerializeField] private CenterSnapScroll snapScroll;
 
-        private int mapCount = 0;
+        private GameSaveData saveData;
+        private List<GameObject> spawnedMapObjects = new List<GameObject>();
 
         private void Awake()
         {
-            if (centerSnapScroll == null && mapManagerPanel != null)
-                centerSnapScroll = mapManagerPanel.GetComponentInChildren<CenterSnapScroll>(true);
+            AutoFindReferences();
+            BindEvents();
+        }
 
-            // Tự động gán sự kiện click cho các nút nếu đã kéo vào Inspector
+        private void Start()
+        {
+            saveData = QuizSaveSystem.Load();
+            if (saveData == null || saveData.maps == null)
+            {
+                saveData = new GameSaveData();
+            }
+
+            ShowHomeMenu();
+        }
+
+        [ContextMenu("Clear All Save Data (Xóa toàn bộ dữ liệu lưu để test)")]
+        public void ClearSaveDataFromInspector()
+        {
+            QuizSaveSystem.ClearAllSaveData();
+            saveData = new GameSaveData();
+            RefreshMapListUI();
+            Debug.Log("[MapManager] Đã làm mới và xóa toàn bộ dữ liệu save!");
+        }
+
+        private void AutoFindReferences()
+        {
+            if (homePanel == null)
+            {
+                Transform t = FindChild(transform, "HomeMenuPanel", "HomePanel", "MenuPanel");
+                if (t != null) homePanel = t.gameObject;
+            }
+
+            if (mapPanel == null)
+            {
+                Transform t = FindChild(transform, "MapManagerPanel", "MapPanel", "LevelPanel");
+                if (t != null) mapPanel = t.gameObject;
+            }
+
+            if (editPanel == null)
+            {
+                Transform t = FindChild(transform, "EditMapPanel", "QuestionEditorPanel");
+                if (t == null && transform.parent != null) t = FindChild(transform.parent, "EditMapPanel", "QuestionEditorPanel");
+                if (t != null) editPanel = t.GetComponent<EditMapPanelUI>();
+            }
+
+            if (startBtn == null && homePanel != null)
+            {
+                Transform t = FindChild(homePanel.transform, "StartButton", "StartBtn", "PlayButton", "PlayBtn");
+                if (t != null) startBtn = t.GetComponent<Button>();
+                else startBtn = homePanel.GetComponentInChildren<Button>(true);
+            }
+
+            if (mapPanel != null)
+            {
+                if (levelContent == null)
+                {
+                    Transform t = FindChild(mapPanel.transform, "MapScrollView/Viewport/LevelContent", "ScrollView/Viewport/Content", "Viewport/LevelContent", "LevelContent");
+                    if (t != null) levelContent = t;
+                }
+
+                if (addMapBtn == null)
+                {
+                    Transform t = FindChild(mapPanel.transform, "AddMapButton", "AddMapBtn", "AddButton", "AddBtn");
+                    if (t != null) addMapBtn = t.GetComponent<Button>();
+                }
+
+                if (backBtn == null)
+                {
+                    Transform t = FindChild(mapPanel.transform, "BackToHomeButton", "BackButton", "BackBtn");
+                    if (t != null) backBtn = t.GetComponent<Button>();
+                }
+
+                if (snapScroll == null)
+                {
+                    snapScroll = mapPanel.GetComponentInChildren<CenterSnapScroll>(true);
+                }
+            }
+        }
+
+        private Transform FindChild(Transform parent, params string[] names)
+        {
+            if (parent == null) return null;
+            foreach (var n in names)
+            {
+                Transform t = parent.Find(n);
+                if (t != null) return t;
+            }
+            return null;
+        }
+
+        private void BindEvents()
+        {
             if (startBtn != null)
                 startBtn.onClick.AddListener(OnStartButtonClicked);
 
@@ -51,82 +143,164 @@ namespace QuizGame
                 backBtn.onClick.AddListener(OnBackButtonClicked);
         }
 
-        private void Start()
+        public void ShowHomeMenu()
         {
-            // Khởi đầu: Luôn hiện HomeMenuPanel và ẩn MapManagerPanel
+            if (homePanel != null) homePanel.SetActive(true);
+            if (mapPanel != null) mapPanel.SetActive(false);
+            if (editPanel != null) editPanel.gameObject.SetActive(false);
+        }
+
+        public void OnStartButtonClicked()
+        {
+            if (homePanel != null) homePanel.SetActive(false);
+            if (mapPanel != null) mapPanel.SetActive(true);
+            if (editPanel != null) editPanel.gameObject.SetActive(false);
+
+            RefreshMapListUI();
+            StartCoroutine(InitSnapRoutine());
+            Debug.Log("[MapManager] Đã mở MapManagerPanel!");
+        }
+
+        public void OnBackButtonClicked()
+        {
             ShowHomeMenu();
         }
 
-        /// <summary>
-        /// Khi bấm nút Start: Ẩn HomeMenuPanel, mở MapManagerPanel
-        /// </summary>
-        public void OnStartButtonClicked()
+        public void OpenEditMap(MapData map)
         {
-            if (homeMenuPanel != null) homeMenuPanel.SetActive(false);
-            if (mapManagerPanel != null) mapManagerPanel.SetActive(true);
+            if (editPanel != null)
+            {
+                if (mapPanel != null) mapPanel.SetActive(false);
+                editPanel.Open(map, () =>
+                {
+                    QuizSaveSystem.Save(saveData);
+                }, () =>
+                {
+                    // Khi đóng EditMapPanel, tự động bật lại MapManagerPanel
+                    if (mapPanel != null) mapPanel.SetActive(true);
+                    RefreshMapListUI();
+                    StartCoroutine(InitSnapRoutine());
+                    Debug.Log("[MapManager] Đã quay lại MapManagerPanel thành công!");
+                });
+            }
+            else
+            {
+                Debug.LogWarning("[MapManager] Chưa gán EditMapPanelUI!");
+            }
+        }
 
+        public void CloseEditMap()
+        {
+            if (editPanel != null && editPanel.gameObject.activeSelf) editPanel.Close();
+            if (mapPanel != null) mapPanel.SetActive(true);
+            RefreshMapListUI();
             StartCoroutine(InitSnapRoutine());
-            Debug.Log("[MapManager] Đã mở MapManagerPanel!");
+            Debug.Log("[MapManager] Đã mở lại MapManagerPanel!");
+        }
+
+        public void OnAddMapButtonClicked()
+        {
+            int nextIndex = saveData.maps.Count + 1;
+            MapData newMap = new MapData($"Bản đồ #{nextIndex}");
+            saveData.maps.Add(newMap);
+
+            QuizSaveSystem.Save(saveData);
+            Debug.Log($"[MapManager] Đã tạo và lưu Map mới: '{newMap.mapName}'");
+
+            GameObject newMapObj = SpawnMapCard(newMap, nextIndex);
+
+            if (addMapBtn != null)
+            {
+                addMapBtn.transform.SetAsLastSibling();
+            }
+
+            if (newMapObj != null)
+            {
+                StartCoroutine(SnapToTargetRoutine(newMapObj.GetComponent<RectTransform>()));
+            }
+        }
+
+        private void RefreshMapListUI()
+        {
+            if (levelContent == null) return;
+
+            foreach (var obj in spawnedMapObjects)
+            {
+                if (obj != null) Destroy(obj);
+            }
+            spawnedMapObjects.Clear();
+
+            // Nếu không có map nào, chỉ hiển thị nút dấu + để người dùng tự tạo
+            for (int i = 0; i < saveData.maps.Count; i++)
+            {
+                SpawnMapCard(saveData.maps[i], i + 1);
+            }
+
+            if (addMapBtn != null)
+            {
+                addMapBtn.transform.SetAsLastSibling();
+            }
+        }
+
+        private GameObject SpawnMapCard(MapData mapData, int index)
+        {
+            if (levelContent == null) return null;
+
+            GameObject mapObj = null;
+            if (mapPrefab != null)
+            {
+                mapObj = Instantiate(mapPrefab, levelContent);
+            }
+            else
+            {
+                mapObj = new GameObject($"Map_{index}", typeof(RectTransform));
+                mapObj.transform.SetParent(levelContent, false);
+            }
+
+            mapObj.name = $"Map_{index}";
+            mapObj.SetActive(true);
+            spawnedMapObjects.Add(mapObj);
+
+            MapItemUI itemUI = mapObj.GetComponent<MapItemUI>();
+            if (itemUI == null) itemUI = mapObj.AddComponent<MapItemUI>();
+
+            itemUI.Setup(
+                mapData,
+                onEdit: (data) => OpenEditMap(data),
+                onPlay: (data) =>
+                {
+                    Debug.Log($"[MapManager] Bắt đầu chơi: {data.mapName} (Số câu hỏi: {data.questions.Count})");
+                }
+            );
+
+            return mapObj;
         }
 
         private System.Collections.IEnumerator InitSnapRoutine()
         {
             yield return null;
-            if (centerSnapScroll != null)
+            if (snapScroll != null)
             {
-                centerSnapScroll.UpdatePadding();
-                centerSnapScroll.SnapToNearestChild(true);
-            }
-        }
-
-        /// <summary>
-        /// Khi bấm nút Back: Quay trở lại HomeMenuPanel
-        /// </summary>
-        public void OnBackButtonClicked()
-        {
-            if (mapManagerPanel != null) mapManagerPanel.SetActive(false);
-            if (homeMenuPanel != null) homeMenuPanel.SetActive(true);
-        }
-
-        /// <summary>
-        /// Khi bấm nút Dấu Cộng (+): Tạo thêm một thẻ Map mới
-        /// </summary>
-        public void OnAddMapButtonClicked()
-        {
-            mapCount++;
-            Debug.Log($"[MapManager] Đã bấm nút dấu '+' -> Tạo Map #{mapCount}");
-
-            // Nếu có gắn mapItemPrefab và levelContent, sinh ra thẻ Map mới
-            if (mapItemPrefab != null && levelContent != null)
-            {
-                GameObject newMap = Instantiate(mapItemPrefab, levelContent);
-                newMap.name = $"Map_{mapCount}";
-                newMap.SetActive(true);
-
-                // Đảm bảo nút dấu cộng luôn nằm ở cuối (bên phải của các map)
-                if (addMapBtn != null)
+                snapScroll.UpdatePadding();
+                if (saveData.maps.Count == 0 && addMapBtn != null)
                 {
-                    addMapBtn.transform.SetAsLastSibling();
+                    snapScroll.SnapTo(addMapBtn.GetComponent<RectTransform>(), true);
                 }
-
-                StartCoroutine(SnapToTargetRoutine(newMap.GetComponent<RectTransform>()));
+                else
+                {
+                    snapScroll.SnapToNearestChild(true);
+                }
             }
         }
 
         private System.Collections.IEnumerator SnapToTargetRoutine(RectTransform target)
         {
             yield return null;
-            if (centerSnapScroll != null && target != null)
+            if (snapScroll != null && target != null)
             {
-                centerSnapScroll.UpdatePadding();
-                centerSnapScroll.SnapTo(target, false);
+                snapScroll.UpdatePadding();
+                snapScroll.SnapTo(target, false);
             }
-        }
-
-        public void ShowHomeMenu()
-        {
-            if (homeMenuPanel != null) homeMenuPanel.SetActive(true);
-            if (mapManagerPanel != null) mapManagerPanel.SetActive(false);
         }
     }
 }

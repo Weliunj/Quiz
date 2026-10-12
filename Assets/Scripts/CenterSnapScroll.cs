@@ -9,16 +9,23 @@ namespace QuizGame
     public class CenterSnapScroll : MonoBehaviour, IBeginDragHandler, IEndDragHandler, IScrollHandler
     {
         [Header("--- CÀI ĐẶT CĂN GIỮA (SNAP) ---")]
-        [Tooltip("Tốc độ trượt căn giữa")]
+        [Tooltip("Tốc độ trượt mượt mà về chính giữa")]
         [SerializeField] private float snapSpeed = 10f;
 
         [Tooltip("Độ nhạy con lăn chuột khi cuộn ngang trên PC")]
         [SerializeField] private float mouseScrollSensitivity = 0.08f;
 
-        [Header("--- THÀNH PHẦN (TỰ ĐỘNG TÌM) ---")]
+        [Header("--- THÀNH PHẦN (TỰ ĐỘNG NHẬN DIỆN) ---")]
+        [Tooltip("Component ScrollRect điều khiển cuộn")]
         [SerializeField] private ScrollRect scrollRect;
+
+        [Tooltip("Vùng hiển thị Viewport của ScrollRect")]
         [SerializeField] private RectTransform viewportRect;
+
+        [Tooltip("Content chứa các thẻ map và nút +")]
         [SerializeField] private RectTransform contentRect;
+
+        [Tooltip("Layout tự động sắp xếp hàng ngang")]
         [SerializeField] private HorizontalLayoutGroup layoutGroup;
 
         private bool isDragging = false;
@@ -46,13 +53,11 @@ namespace QuizGame
         private void Start()
         {
             UpdatePadding();
-            // Ban đầu tự động căn giữa vào phần tử đầu tiên
             SnapToNearestChild(true);
         }
 
         private void Update()
         {
-            // Trượt mượt mà về vị trí căn giữa khi thả chuột
             if (isSnapping && !isDragging && contentRect != null)
             {
                 Vector2 pos = contentRect.anchoredPosition;
@@ -68,7 +73,6 @@ namespace QuizGame
             }
             else if (!isDragging && !isSnapping && scrollRect != null && Mathf.Abs(scrollRect.velocity.x) < 50f)
             {
-                // Khi quán tính cuộn dừng lại, hít vào phần tử gần nhất
                 if (Mathf.Abs(scrollRect.velocity.x) > 0.01f)
                 {
                     SnapToNearestChild(false);
@@ -76,10 +80,6 @@ namespace QuizGame
             }
         }
 
-        /// <summary>
-        /// Tính toán khoảng đệm (Padding) để phần tử đầu và phần tử cuối cùng
-        /// đều có thể chạy ra chính giữa màn hình thay vì bị kẹt ở mép!
-        /// </summary>
         public void UpdatePadding()
         {
             if (viewportRect == null || contentRect == null || layoutGroup == null) return;
@@ -92,7 +92,6 @@ namespace QuizGame
                 viewportWidth = p.rect.width;
             }
 
-            // Lấy độ rộng của phần tử đầu và phần tử cuối
             float firstItemWidth = 300f;
             float lastItemWidth = 200f;
 
@@ -119,7 +118,6 @@ namespace QuizGame
                 }
             }
 
-            // Padding trái giúp Item đầu tiên ra giữa, Padding phải giúp Item cuối ra giữa
             int leftPad = Mathf.Max(0, Mathf.RoundToInt((viewportWidth - firstItemWidth) * 0.5f));
             int rightPad = Mathf.Max(0, Mathf.RoundToInt((viewportWidth - lastItemWidth) * 0.5f));
 
@@ -129,9 +127,6 @@ namespace QuizGame
             LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
         }
 
-        /// <summary>
-        /// Cuộn và căn chính giữa vào 1 item cụ thể (ví dụ Map vừa tạo hoặc nút dấu +)
-        /// </summary>
         public void SnapTo(RectTransform child, bool instant = false)
         {
             if (child == null || viewportRect == null || contentRect == null) return;
@@ -139,7 +134,6 @@ namespace QuizGame
             UpdatePadding();
             currentFocusedChild = child;
 
-            // Tính toán khoảng cách để đưa tâm của child về đúng tâm của viewport
             Vector3 childWorldCenter = child.TransformPoint(child.rect.center);
             Vector3 childInViewport = viewportRect.InverseTransformPoint(childWorldCenter);
             float diffX = childInViewport.x - viewportRect.rect.center.x;
@@ -164,9 +158,6 @@ namespace QuizGame
             }
         }
 
-        /// <summary>
-        /// Tự động tìm phần tử gần tâm màn hình nhất và hít vào giữa
-        /// </summary>
         public void SnapToNearestChild(bool instant = false)
         {
             if (contentRect == null || viewportRect == null || contentRect.childCount == 0) return;
@@ -214,9 +205,6 @@ namespace QuizGame
             SnapToNearestChild(false);
         }
 
-        /// <summary>
-        /// Hỗ trợ con lăn chuột (Mouse Scroll Wheel) cho PC cuộn ngang
-        /// </summary>
         public void OnScroll(PointerEventData eventData)
         {
             if (scrollRect == null) return;
