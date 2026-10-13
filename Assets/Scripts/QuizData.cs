@@ -44,11 +44,29 @@ namespace QuizGame
     }
 
     [Serializable]
+    public struct StationPos
+    {
+        public float x;
+        public float y;
+
+        public StationPos(float x, float y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        public Vector2 ToVector2() => new Vector2(x, y);
+        public static implicit operator Vector2(StationPos p) => new Vector2(p.x, p.y);
+        public static implicit operator StationPos(Vector2 v) => new StationPos(v.x, v.y);
+    }
+
+    [Serializable]
     public class MapData
     {
         public string id;
         public string mapName;
         public int stationCount = 5; // Số lượng trạm / tầng leo đến đỉnh núi
+        public List<StationPos> stationPositions = new List<StationPos>(); // Tọa độ World Transform của các trạm
         public List<QuestionData> questions = new List<QuestionData>();
 
         public MapData()
@@ -56,6 +74,7 @@ namespace QuizGame
             id = Guid.NewGuid().ToString();
             mapName = "Bản đồ mới";
             stationCount = 5;
+            stationPositions = new List<StationPos>();
             questions = new List<QuestionData>();
         }
 
@@ -64,6 +83,7 @@ namespace QuizGame
             id = Guid.NewGuid().ToString();
             mapName = name;
             stationCount = Mathf.Max(1, stations);
+            stationPositions = new List<StationPos>();
             questions = new List<QuestionData>();
         }
     }

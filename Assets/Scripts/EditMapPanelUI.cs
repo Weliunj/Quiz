@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 #if UNITY_EDITOR
@@ -13,14 +14,32 @@ namespace QuizGame
 {
     public class EditMapPanelUI : MonoBehaviour
     {
-        [Header("--- 2 CHẾ ĐỘ GIAO DIỆN CON ---")]
+        [Header("--- 1. BẢNG CHÍNH (MAIN PANEL) ---")]
+        [Tooltip("Bảng chính của EditMapPanel (MainPanel: hiển thị đầu tiên khi bấm Edit trên thẻ map)")]
+        [FormerlySerializedAs("otherArea")]
+        [SerializeField] private GameObject mainPanelArea;
+
+        [Tooltip("Nút chuyển từ MainPanel sang tạo câu hỏi (CreateBtn trong MainPanel)")]
+        [SerializeField] private Button mainCreateBtn;
+
+        [Tooltip("Nút chuyển từ MainPanel sang danh sách câu hỏi (ListBtn trong MainPanel)")]
+        [SerializeField] private Button mainListBtn;
+
+        [Tooltip("Ô nhập số lượng trạm đến đỉnh núi (NumberStations)")]
+        [SerializeField] private TMP_InputField numberStationsInput;
+
+        [Tooltip("Ô nhập tên màn chơi (NameLevel)")]
+        [SerializeField] private TMP_InputField nameLevelInput;
+
+        [Header("--- 2. KHU VỰC TẠO & SỬA CÂU HỎI (CREATE QUESTION) ---")]
         [Tooltip("Khu vực nhập câu hỏi & đáp án (CreateQuestion)")]
         [SerializeField] private GameObject createQuestionArea;
 
+        [Header("--- 3. KHU VỰC DANH SÁCH CÂU HỎI (LIST QUESTIONS) ---")]
         [Tooltip("Khu vực danh sách các câu hỏi (ListQuestions)")]
         [SerializeField] private GameObject listQuestionsArea;
 
-        [Header("--- NÚT CHUYỂN ĐỔI CHẾ ĐỘ ---")]
+        [Header("--- NÚT CHUYỂN ĐỔI CHẾ ĐỘ PHỤ ---")]
         [Tooltip("Nút chuyển sang xem danh sách câu hỏi")]
         [SerializeField] private Button viewListBtn;
 
@@ -99,15 +118,6 @@ namespace QuizGame
         [Tooltip("Nút xóa câu hỏi đang chọn khỏi map (DeleteQuest)")]
         [SerializeField] private Button deleteBtn;
 
-        [Header("--- THÔNG TIN KHÁC (OTHER) ---")]
-        [Tooltip("Khu vực chứa thông tin khác (Other)")]
-        [SerializeField] private GameObject otherArea;
-
-        [Tooltip("Ô nhập số lượng trạm đến đỉnh núi (NumberStations)")]
-        [SerializeField] private TMP_InputField numberStationsInput;
-
-        [Tooltip("Ô nhập tên màn chơi (NameLevel)")]
-        [SerializeField] private TMP_InputField nameLevelInput;
 
         [Header("--- ĐIỀU HƯỚNG ---")]
         [Tooltip("Nút đóng bảng soạn câu hỏi và quay về Map Manager")]
@@ -177,13 +187,46 @@ namespace QuizGame
 
         private void AutoFindReferences()
         {
-            // Tìm 2 khu vực con
+            // 1. Tìm MainPanel
+            if (mainPanelArea == null)
+            {
+                Transform t = FindChildTransform(transform, "MainPanel", "Main", "Other", "OtherSettings", "MapSettings");
+                if (t != null) mainPanelArea = t.gameObject;
+            }
+
+            // Tìm các thành phần trong MainPanel
+            Transform mainRoot = mainPanelArea != null ? mainPanelArea.transform : transform;
+            if (mainCreateBtn == null) mainCreateBtn = FindButtonFlexible(mainRoot, "CreateBtn", "CreateQuestionBtn", "NewQuestionBtn", "Create");
+            if (mainListBtn == null) mainListBtn = FindButtonFlexible(mainRoot, "ListBtn", "ListQuestionsBtn", "ViewListBtn", "List");
+
+            if (numberStationsInput == null)
+            {
+                numberStationsInput = FindInputFieldFlexible(mainRoot, "NumberStations/InputField (TMP)", "NumberStations", "StationCount", "Stations");
+                if (numberStationsInput == null)
+                {
+                    Transform t = FindChildTransform(mainRoot, "NumberStations");
+                    if (t != null) numberStationsInput = t.GetComponentInChildren<TMP_InputField>(true);
+                }
+            }
+
+            if (nameLevelInput == null)
+            {
+                nameLevelInput = FindInputFieldFlexible(mainRoot, "NameLevel/InputField (TMP)", "NameLevel", "LevelName", "MapName");
+                if (nameLevelInput == null)
+                {
+                    Transform t = FindChildTransform(mainRoot, "NameLevel");
+                    if (t != null) nameLevelInput = t.GetComponentInChildren<TMP_InputField>(true);
+                }
+            }
+
+            // 2. Tìm CreateQuestion
             if (createQuestionArea == null)
             {
                 Transform t = FindChildTransform(transform, "CreateQuestion", "QuestionEditor", "CreateArea");
                 if (t != null) createQuestionArea = t.gameObject;
             }
 
+            // 3. Tìm ListQuestions
             if (listQuestionsArea == null)
             {
                 Transform t = FindChildTransform(transform, "ListQuestions", "QuestionList");
@@ -288,35 +331,7 @@ namespace QuizGame
             if (editQuestBtn == null) editQuestBtn = FindButtonFlexible(transform, "EditQuestBtn", "EditQuest", "EditBtn", "EditButton");
             if (deleteBtn == null) deleteBtn = FindButtonFlexible(transform, "DeleteQuest", "DeleteQuestBtn", "DeleteQuestionButton", "DeleteBtn");
 
-            // Tìm cụm Other (NumberStations và NameLevel)
-            if (otherArea == null)
-            {
-                Transform t = FindChildTransform(transform, "Other", "OtherSettings", "MapSettings");
-                if (t != null) otherArea = t.gameObject;
-            }
-
-            Transform otherRoot = otherArea != null ? otherArea.transform : transform;
-            if (numberStationsInput == null)
-            {
-                numberStationsInput = FindInputFieldFlexible(otherRoot, "NumberStations/InputField (TMP)", "NumberStations", "StationCount", "Stations");
-                if (numberStationsInput == null)
-                {
-                    Transform t = FindChildTransform(otherRoot, "NumberStations");
-                    if (t != null) numberStationsInput = t.GetComponentInChildren<TMP_InputField>(true);
-                }
-            }
-
-            if (nameLevelInput == null)
-            {
-                nameLevelInput = FindInputFieldFlexible(otherRoot, "NameLevel/InputField (TMP)", "NameLevel", "LevelName", "MapName");
-                if (nameLevelInput == null)
-                {
-                    Transform t = FindChildTransform(otherRoot, "NameLevel");
-                    if (t != null) nameLevelInput = t.GetComponentInChildren<TMP_InputField>(true);
-                }
-            }
-
-            // Tìm nút Back
+            // Tìm nút Back chung
             if (backBtn == null) backBtn = FindButtonFlexible(transform, "BackBtn", "BackButton", "CloseBtn", "CloseButton");
         }
 
@@ -363,6 +378,23 @@ namespace QuizGame
 
         private void BindEvents()
         {
+            // Gán sự kiện cho các nút trên MainPanel
+            if (mainCreateBtn != null)
+            {
+                mainCreateBtn.onClick.RemoveAllListeners();
+                mainCreateBtn.onClick.AddListener(() =>
+                {
+                    ClearInputs();
+                    ShowCreateQuestionMode();
+                });
+            }
+
+            if (mainListBtn != null)
+            {
+                mainListBtn.onClick.RemoveAllListeners();
+                mainListBtn.onClick.AddListener(ShowListQuestionsMode);
+            }
+
             if (createBtn != null)
             {
                 createBtn.onClick.RemoveAllListeners();
@@ -386,7 +418,28 @@ namespace QuizGame
             if (backBtn != null)
             {
                 backBtn.onClick.RemoveAllListeners();
-                backBtn.onClick.AddListener(Close);
+                backBtn.onClick.AddListener(OnBackClicked);
+            }
+
+            // Gán sự kiện nút Back con bên trong CreateQuestion hoặc ListQuestions (nếu có)
+            if (createQuestionArea != null)
+            {
+                Button backInCreate = FindButtonFlexible(createQuestionArea.transform, "BackBtn", "BackToMainBtn", "CloseBtn", "CancelBtn");
+                if (backInCreate != null && backInCreate != backBtn)
+                {
+                    backInCreate.onClick.RemoveAllListeners();
+                    backInCreate.onClick.AddListener(ShowMainPanelMode);
+                }
+            }
+
+            if (listQuestionsArea != null)
+            {
+                Button backInList = FindButtonFlexible(listQuestionsArea.transform, "BackBtn", "BackToMainBtn", "CloseBtn", "CancelBtn");
+                if (backInList != null && backInList != backBtn)
+                {
+                    backInList.onClick.RemoveAllListeners();
+                    backInList.onClick.AddListener(ShowMainPanelMode);
+                }
             }
 
             if (viewListBtn != null)
@@ -554,7 +607,7 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Mở bảng EditMapPanel: Mặc định bật bảng nhập CreateQuestion và tắt bảng ListQuestions
+        /// Mở bảng EditMapPanel: Mặc định hiển thị MainPanel đầu tiên khi bấm Edit ở thẻ map
         /// </summary>
         public void Open(MapData map, Action onDataChanged = null, Action onClose = null)
         {
@@ -571,18 +624,25 @@ namespace QuizGame
             ClearInputs();
             HideGuidePanel();
 
-            // Hiển thị tên màn chơi và số lượng trạm
-            if (nameLevelInput != null)
-            {
-                nameLevelInput.text = currentMap.mapName;
-            }
-            if (numberStationsInput != null)
-            {
-                numberStationsInput.text = (currentMap.stationCount <= 0 ? 5 : currentMap.stationCount).ToString();
-            }
+            // MẶC ĐỊNH LOAD MAINPANEL ĐẦU TIÊN KHI BẤM EDIT Ở MAP
+            ShowMainPanelMode();
+        }
 
-            // Mặc định mở CreateQuestion theo yêu cầu
-            ShowCreateQuestionMode();
+        /// <summary>
+        /// Xử lý bấm nút Back: Nếu đang ở CreateQuestion hoặc ListQuestions thì quay về MainPanel,
+        /// nếu đang ở MainPanel thì đóng bảng Edit và quay về MapManagerPanel.
+        /// </summary>
+        public void OnBackClicked()
+        {
+            if ((createQuestionArea != null && createQuestionArea.activeSelf) ||
+                (listQuestionsArea != null && listQuestionsArea.activeSelf))
+            {
+                ShowMainPanelMode();
+            }
+            else
+            {
+                Close();
+            }
         }
 
         public void Close()
@@ -606,19 +666,45 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Chế độ 1: Bật bảng nhập câu hỏi (CreateQuestion), tắt bảng danh sách (ListQuestions)
+        /// Chế độ 0: Bật bảng chính (MainPanel), ẩn CreateQuestion và ListQuestions
+        /// </summary>
+        public void ShowMainPanelMode()
+        {
+            if (mainPanelArea != null) mainPanelArea.SetActive(true);
+            if (createQuestionArea != null) createQuestionArea.SetActive(false);
+            if (listQuestionsArea != null) listQuestionsArea.SetActive(false);
+            HideGuidePanel();
+
+            // Cập nhật dữ liệu hiển thị trên MainPanel
+            if (currentMap != null)
+            {
+                if (nameLevelInput != null)
+                {
+                    nameLevelInput.text = currentMap.mapName;
+                }
+                if (numberStationsInput != null)
+                {
+                    numberStationsInput.text = (currentMap.stationCount <= 0 ? 5 : currentMap.stationCount).ToString();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Chế độ 1: Bật bảng nhập câu hỏi (CreateQuestion), ẩn MainPanel và ListQuestions
         /// </summary>
         public void ShowCreateQuestionMode()
         {
+            if (mainPanelArea != null) mainPanelArea.SetActive(false);
             if (createQuestionArea != null) createQuestionArea.SetActive(true);
             if (listQuestionsArea != null) listQuestionsArea.SetActive(false);
         }
 
         /// <summary>
-        /// Chế độ 2: Bật bảng danh sách (ListQuestions), tắt bảng nhập câu hỏi (CreateQuestion)
+        /// Chế độ 2: Bật bảng danh sách (ListQuestions), ẩn MainPanel và CreateQuestion
         /// </summary>
         public void ShowListQuestionsMode()
         {
+            if (mainPanelArea != null) mainPanelArea.SetActive(false);
             if (createQuestionArea != null) createQuestionArea.SetActive(false);
             if (listQuestionsArea != null) listQuestionsArea.SetActive(true);
             RefreshListUI();

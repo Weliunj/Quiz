@@ -22,6 +22,189 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-13 11:28] — feat(station-generator): independent fixed layer spacing (layerSpacingY) and free horizontal random spread (horizontalSpreadX)
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - **Khoảng cách trục Y giữa các tầng cố định theo cấu hình (`layerSpacingY`)**:
+      - Bỏ phụ thuộc vào kích thước sprite ảnh núi. Mỗi tầng trạm tiếp theo sẽ tự động cao hơn trạm trước đúng `layerSpacingY` (mặc định `2.2f`). Khi có 20 trạm, toàn bộ hành trình sẽ vươn cao tự nhiên theo số trạm: $Y_i = minY + (i \times layerSpacingY)$.
+    - **Tọa độ X rải ngẫu nhiên tự do hoàn toàn (`horizontalSpreadX`)**:
+      - Bỏ logic rải zic-zac luân phiên trái-phải-trái-phải. Trạm được sinh ngẫu nhiên tự do trên toàn bộ bề ngang `horizontalSpreadX` (mặc định `8.0f`), có thể nằm ở giữa, hơi lệch trái, hơi lệch phải, hoặc ngoài rìa mà không bị gò bó.
+    - **Camera Panoramic Overview thích ứng theo độ cao thực tế**:
+      - Camera tự động căn góc nhìn toàn cảnh theo độ cao trạm thực tế thay vì bị giới hạn bởi sprite núi, đảm bảo nhìn thấy trọn vẹn từ trạm 1 đến trạm 20.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 28-36, 430-485, 910-925 modified)
+- **Ảnh hưởng**: Người dùng có thể tùy ý điều chỉnh khoảng cách giữa các tầng bằng 1 biến duy nhất `layerSpacingY` và độ rộng rải trạm bằng `horizontalSpreadX` mà không lo bị phụ thuộc vào ảnh background núi.
+
+### [2026-10-13 11:22] — feat(station-generator): organic winding distribution and uniform vertical layer scaling for high station counts
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - **Khắc phục lỗi trạm chỉ bám ở 2 mép biên khi số lượng trạm lớn (ví dụ: 20 trạm)**:
+      - Loại bỏ logic ép hướng nhị phân ping-pong (`previousX >= centerX ? -1 : 1` với bước nhảy cưỡng bức cách xa tâm).
+      - Thay thế bằng thuật toán sóng uốn lượn tự nhiên (`organic winding path` dùng hàm sin theo pha kết hợp wander ngẫu nhiên và độ dốc thoải hình nón ngọn núi `mountainSlopeFactor`). Trạm giờ đây phân bổ mềm mại, có các trạm nằm ở giữa trung tâm, sườn trái, sườn phải, uốn lượn đều đặn.
+    - **Phân bổ đều chiều cao trục Y giữa các tầng trạm**:
+      - Tọa độ $Y$ được chia đều theo tỷ lệ tiến trình từ chân núi (`minY`) lên đỉnh núi (`maxY`) thay vì cộng dồn bước cố định có nguy cơ vượt đỉnh hoặc bị dồn cục ở đỉnh.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 425-475 modified)
+- **Ảnh hưởng**: Khi tạo số lượng trạm lớn (như 20 trạm hoặc nhiều hơn), đường đi leo núi uốn lượn tự nhiên, xuất hiện hài hòa ở trung tâm lẫn 2 sườn núi và rải đều từ chân lên tới đỉnh mà không bị dồn ứ.
+
+### [2026-10-13 11:09] — feat(camera): add 1.0s delay at base station before pan and 1.0s delay at summit before overview zoom
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - **Thêm thời gian dừng chờ tại chân núi (`baseStationDelay = 1.0f`)**:
+      - Khi vừa vào map, camera focus vào Player ở chân núi và dừng chờ đúng 1 giây để người chơi định vị rõ vị trí xuất phát trước khi bắt đầu lướt theo đường mòn qua các trạm.
+    - **Thêm thời gian dừng chờ tại đỉnh núi (`summitArrivalDelay = 1.0f`)**:
+      - Khi camera hoàn tất hành trình lướt lên tới trạm đỉnh núi, camera sẽ dừng lại chiêm ngưỡng đỉnh núi 1 giây trước khi chuyển sang giai đoạn phóng to toàn cảnh ngọn núi (`zoom full`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 105-115, 829-885 modified)
+- **Ảnh hưởng**: Nhịp điệu chuyển động của máy quay điện ảnh trở nên rõ ràng và chuyên nghiệp hơn, có các nhịp dừng ngắm có chủ đích ở cả điểm đầu (chân núi) và điểm mốc (đỉnh núi).
+
+### [2026-10-13 10:17] — feat(camera & gameplay): slow down player climb, ease-in camera pan to summit, and ensure uninterrupted intro
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - **Giảm tốc độ di chuyển của Player cực chậm (`playerClimbDuration = 2.8f`)**:
+      - Tăng thời gian di chuyển giữa 2 trạm từ 1.1s lên `2.8s`, giúp nhân vật leo từng bước điềm tĩnh, mượt mà và camera có đủ thời gian lia theo chậm rãi.
+    - **Camera lướt lên đỉnh núi từ chậm chuyển sang nhanh dần (Ease-In Smooth Acceleration)**:
+      - Tăng thời gian lướt lên đỉnh từ ~2.0s lên `4.2s` (`cameraPanToSummitDuration = 4.2f`) giúp không còn bị cảm giác quá vội.
+      - Áp dụng hàm nội suy hàm mũ `t = (elapsed / panDuration)^2.2f` (Ease-In), xuất phát cực kỳ nhẹ nhàng, lướt êm ở các tầng thấp rồi tăng tốc dần khi phóng lên đỉnh núi.
+    - **Luôn chiếu trọn vẹn màn Intro (Uninterrupted Showcase)**:
+      - Loại bỏ sự kiện click chuột/chạm màn hình để skip intro trong `Update()`, đảm bảo máy quay luôn thực hiện trọn vẹn thước phim điện ảnh soi đường và zoom toàn cảnh mỗi lần vào map.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 100-115, 215-230, 827-880, 1115-1125 modified)
+- **Ảnh hưởng**: Trải nghiệm điện ảnh thỏa mãn đúng mong đợi: mở đầu chậm rãi rồi vút lên đỉnh, không bị gián đoạn vô tình, và nhân vật leo núi cực kỳ từ tốn.
+
+### [2026-10-13 10:12] — fix(camera & gameplay): fix intro re-entry after pause, disable free camera pan, speed up overview & return, shrink player scale, widen station spacing
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - **Khắc phục lỗi vào lại map không di chuyển camera**: Khi mở map (`OpenMountain`), thiết lập ngay vị trí và kích thước Camera tức thời về vị trí Player tại chân núi trước khi kích hoạt Coroutine intro, giúp chuỗi intro và follow luôn chạy chính xác 100% mỗi lần vào map sau khi Pause.
+    - **Vô hiệu hóa kéo camera tự do (`enableFreeCameraPan = false`)**: Camera luôn khoá chặt theo Player, không bị trôi hay lệch góc nhìn khi người chơi lỡ tay chạm/kéo chuột trên màn hình.
+    - **Tăng tốc độ Zoom toàn cảnh & Bay về Player**:
+      - Giảm thời gian Zoom toàn cảnh ngọn núi xuống `0.55s` (`zoomOverviewSpeed`).
+      - Giảm thời gian dừng ngắm toàn cảnh xuống `0.5s` (`overviewHoldDuration`).
+      - Giảm thời gian bay từ đỉnh/toàn cảnh quay về lại Player xuống `0.65s` (`returnToPlayerSpeed`).
+    - **Thu nhỏ kích thước Player Token**: Giảm `playerScale` từ `0.5f` xuống `0.28f`, căn chỉnh lại độ cao đứng `+0.22f` giúp nhân vật nhỏ gọn, thanh thoát, cân đối hoàn hảo với các trạm.
+    - **Tăng khoảng cách giữa các trạm (`minStationSpacingY = 1.6f`, `widthMarginFactor = 0.88f`)**:
+      - Trục Y (chiều cao đứng): Bổ sung cơ chế giãn tầng tối thiểu `minStationSpacingY` và giảm padding sườn núi (`0.5f`), giúp các trạm trải dài đều đặn từ chân núi lên đỉnh núi.
+      - Trục X (chiều ngang sườn núi): Tăng biên độ lệch ngẫu nhiên sang 2 bên sườn núi (`maxOffsetSpread * 0.55f`), tạo con đường mòn uốn lượn zigzag rộng rãi và đẹp mắt hơn.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 25-35, 56-65, 88-115, 265-285, 385-435, 638-645, 663-700, 843-895, 950-955, 1085-1115 modified)
+- **Ảnh hưởng**: Trải nghiệm vào map mượt mà, tốc độ intro nhanh dứt khoát không phải chờ lâu, camera khoá chặt người chơi và các trạm được phân bổ rộng rãi, thoáng đãng.
+
+### [2026-10-13 09:50] — feat(camera): implement cinematic intro sequence, player character, and dynamic camera follow
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - **Hiệu ứng máy quay điện ảnh (Cinematic Intro Sequence)** khi vừa mở map (`PlayMountainIntroSequence`):
+      1. Khởi đầu: Đặt Camera cận cảnh ngay tại vị trí Player ở chân núi (trạm xuất phát index 0) với kích thước thu nhỏ `camPlayerSize` (5.2f).
+      2. Soi đường mòn (`cachedPathPoints`): Camera lướt mượt mà uốn lượn theo các khúc cua của con đường mòn leo núi từ chân lên đến trạm đỉnh.
+      3. Zoom toàn cảnh ngọn núi (`camOverviewSize = 12f`): Đẩy camera về trung tâm ngọn núi, phóng tầm mắt bao quát toàn bộ ngọn núi và dừng lại 1 nhịp (`overviewHoldDuration = 1.0f`) để chiêm ngưỡng.
+      4. Lao về lại Player + thu nhỏ cam: Camera bay nhanh và êm ái từ trung tâm ngọn núi quay trở về vị trí nhân vật, đồng thời thu nhỏ ống kính lại `camPlayerSize` (5.2f).
+      5. Tự động chuyển sang chế độ Camera luôn theo sát Player (`isFollowingPlayer = true`).
+      6. Hỗ trợ bỏ qua nhanh (Skip): Người chơi có thể click chuột hoặc bấm Space bất kỳ lúc nào để chuyển ngay vào góc nhìn bám theo Player.
+    - **Nhân vật người chơi (Player Character)**:
+      - Tự động sinh `Player_Climber` tại trạm xuất phát (hoặc dùng `playerPrefab` tùy chọn) với huy hiệu cam nổi bật viền vàng kim, bóng đổ, chữ `P` và hiệu ứng nhún nhảy nhịp nhàng (`UpdatePlayerIdleAnimation`).
+      - Hỗ trợ di chuyển từng bước dọc theo đường mòn (`MovePlayerToNextStation`, `MovePlayerAlongTrailRoutine`) khi người chơi leo trạm.
+    - **Camera luôn bám theo Player (`HandleCameraFollowPlayer`)**:
+      - Camera liên tục Lerp mượt mà theo tọa độ người chơi với tốc độ `cameraFollowSpeed` và độ lệch nhìn trước `playerCameraOffsetY`.
+      - Khi người chơi kéo rê chuột để khám phá ngọn núi, chế độ follow tạm dừng; sau `returnToPlayerDelay` (1.8s) không thao tác, camera sẽ tự động lướt êm ái quay về bám theo người chơi.
+  - Cập nhật [MapManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MapManager.cs):
+    - Kết nối sự kiện nút leo núi `OnClimbButtonClicked`: Gọi `mountainManager.MovePlayerToNextStation()` để di chuyển nhân vật lên trạm kế tiếp và camera tự động theo sát bước chân người chơi.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 95-135, 190-250, 455-470, 560-580, 595-750 modified/added)
+  - `Assets/Scripts/MapManager.cs` (lines 393-404 modified)
+- **Ảnh hưởng**: Hoàn thiện toàn bộ trải nghiệm điện ảnh và bám sát nhân vật khi vào màn chơi leo núi đúng như yêu cầu của người dùng.
+
+### [2026-10-13 09:27] — fix(compiler): resolve CS1503 delegate conversion error for CloseMountain in UnityEvent
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - Khắc phục lỗi biên dịch `CS1503: Argument 1: cannot convert from 'method group' to 'UnityAction'` khi đăng ký sự kiện cho nút `backBtn`.
+    - Bổ sung phương thức nạp chồng không tham số `public void CloseMountain()` chuyển tiếp sang `CloseMountain(true)`.
+    - Sử dụng cú pháp lambda `() => CloseMountain()` trong `backBtn.onClick.AddListener(...)` tương thích chuẩn với kiểu delegate `UnityAction`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 150-155, 212-220 modified)
+- **Ảnh hưởng**: Khắc phục dứt điểm lỗi biên dịch trong Unity, scene biên dịch sạch sẽ không còn cảnh báo hay lỗi đỏ.
+
+### [2026-10-13 09:14] — fix(navigation): resolve infinite recursion on PauseBtn, restore camera state, and prevent UI vanishing
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - Khắc phục lỗi đệ quy lặp vô tận: Trong `CloseMountain(bool triggerCallback = true)`, reset `onBackCallback = null` trước khi gọi callback, tránh việc `CloseMountain` và `OnPauseButtonClicked` gọi chéo lẫn nhau gây văng ngoại lệ StackOverflow làm đứng luồng bật lại `MapManagerPanel`.
+    - Bảo vệ an toàn GameObject và Canvas: Không bao giờ vô hiệu hóa (`SetActive(false)`) toàn bộ Canvas hoặc các Panel cốt lõi (`MapManagerPanel`, `HomeMenuPanel`, `GamePanel`) khi đóng ngọn núi.
+    - Lưu và khôi phục Camera (`savedCameraPos`, `savedCameraSize`): Tự động ghi nhớ vị trí và cỡ Camera ban đầu trước khi vào màn chơi và phục hồi nguyên vẹn khi Pause/thoát về menu.
+  - Cập nhật [MapManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MapManager.cs):
+    - Trong `OnPauseButtonClicked`: Gọi `CloseMountain(triggerCallback: false)` để chặn đệ quy quay lại. Đảm bảo `MapManagerPanel` và `Canvas` luôn được kích hoạt lại (`SetActive(true)`) ngay lập tức kể cả khi tham chiếu bị mất.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 165-245 modified)
+  - `Assets/Scripts/MapManager.cs` (lines 192-210, 360-395 modified)
+- **Ảnh hưởng**: Khắc phục triệt để lỗi bấm Pause làm biến mất toàn bộ UI. Người dùng bấm Pause từ GamePanel sẽ đóng màn núi, phục hồi camera và quay lại ngay màn hình chọn map mượt mà 100%.
+
+### [2026-10-13 09:05] — feat(ui): load MainPanel first when editing map, add 3-panel navigation for EditMapPanel
+- **Tác vụ**:
+  - Cập nhật [EditMapPanelUI.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/EditMapPanelUI.cs):
+    - Thay đổi luồng mở bảng: Khi bấm `Edit` ở bất kỳ thẻ map nào từ `MapManager`, mặc định nạp và hiển thị `MainPanel` đầu tiên (`ShowMainPanelMode()`), ẩn `CreateQuestion` và `ListQuestions`.
+    - Hỗ trợ đầy đủ các thành phần trong `MainPanel`:
+      - Ô nhập số tầng trạm `NumberStations` (`numberStationsInput`).
+      - Ô nhập tên bản đồ `NameLevel` (`nameLevelInput`).
+      - Nút `CreateBtn` (`mainCreateBtn`): Chuyển sang bảng soạn câu hỏi `CreateQuestion`.
+      - Nút `ListBtn` (`mainListBtn`): Chuyển sang bảng danh sách câu hỏi `ListQuestions`.
+    - Tối ưu hóa nút `BackBtn` thành điều hướng phân tầng trực quan:
+      - Khi đang ở `CreateQuestion` hoặc `ListQuestions`: Bấm `BackBtn` (hoặc nút Back con) sẽ quay trở lại `MainPanel`.
+      - Khi đang ở `MainPanel`: Bấm `BackBtn` sẽ đóng `EditMapPanel` và quay trở về danh sách map (`MapManagerPanel`).
+    - Sử dụng `[FormerlySerializedAs("otherArea")]` và cơ chế quét tự động thông minh (`AutoFindReferences`) giúp tương thích mượt mà với cây Hierarchy trong scene mà không làm mất liên kết.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs` (lines 17-45, 187-430, 609-710 modified)
+- **Ảnh hưởng**: Hoàn thiện cấu trúc UI 3 phân vùng (MainPanel -> CreateQuestion / ListQuestions) cho EditMapPanel, mang lại trải nghiệm chỉnh sửa thông số bản đồ và quản lý câu hỏi rõ ràng, mạch lạc.
+
+### [2026-10-13 08:44] — feat(gameplay): disable scroll zoom, scale down station sizes, and implement smooth curved LineRenderer trails
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - Tắt zoom bằng con lăn chuột (`enableScrollZoom = false` mặc định), loại bỏ hoàn toàn tình trạng vô tình cuộn chuột làm đổi kích thước camera khi spawn và ngắm trạm; vẫn giữ nguyên thao tác kéo rê chuột (Pan Camera) dọc ngọn núi.
+    - Thu nhỏ tỉ lệ trạm (`stationScale = 0.35f`, `summitScale = 0.5f`) áp dụng cho cả `stationPrefab` lẫn trạm mặc định, đồng thời giảm cỡ font chữ TextMeshPro để các trạm xuất hiện vừa vặn, thanh thoát trên sườn núi.
+    - Cải tiến `LineRenderer` từ các đoạn thẳng gấp khúc sang đường cong uốn lượn mềm mại (Curved Mountain Trail) sử dụng thuật toán nội suy Catmull-Rom spline (`GenerateCurvedPath`), bo tròn góc cong và hai đầu mút (`numCornerVertices = 5`, `numCapVertices = 5`), nét vẽ mượt mà tự nhiên (`trailWidth = 0.12f`).
+  - Cập nhật [StationWorldItem.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/StationWorldItem.cs):
+    - Tối ưu nhãn hiển thị thành 1 dòng gọn gàng (`"🏔️ Đỉnh"`, `"1"`, `"2"`...) giúp nội dung nằm vừa vặn hoàn hảo bên trong biểu tượng trạm thu nhỏ.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 32-60, 107-120, 311-435, 529-550 modified)
+  - `Assets/Scripts/StationWorldItem.cs` (lines 56-62 modified)
+- **Ảnh hưởng**: Trải nghiệm hình ảnh ngọn núi leo dốc tự nhiên và thẩm mỹ cao hơn rõ rệt: đường mòn uốn lượn mềm mại qua từng trạm, các trạm nhỏ gọn tinh tế và thao tác camera ổn định không bị lăn chuột ngoài ý muốn.
+
+### [2026-10-13 08:12] — feat(gameplay): verify exact station count spawning, disable station click interactions, and hook GamePanel PauseBtn
+- **Tác vụ**:
+  - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - Đảm bảo sinh chính xác 100% số lượng trạm theo đúng cấu hình `stationCount` của từng bản đồ (từ 1 trạm trở lên, an toàn không lỗi chia 0).
+    - Xóa bỏ hoàn toàn cơ chế bấm vào trạm (`OnStationClicked`, không thêm collider nhận click): Các trạm hiện tại chỉ là các mốc trực quan (visual checkpoints/layers) trên sườn núi.
+  - Cập nhật [StationWorldItem.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/StationWorldItem.cs):
+    - Gỡ bỏ `[RequireComponent(typeof(Collider2D))]`, các hàm `OnMouseDown`, `OnMouseEnter`, `OnMouseExit` và callback bấm chuột để tránh nhận sự kiện click.
+  - Cập nhật [MapManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MapManager.cs):
+    - Tích hợp `GamePanel` (gồm 2 nút `PauseBtn` và `ClimbBtn`):
+      - Khi bấm `Play` trên thẻ map: Tự động bật `GamePanel` và mở màn chơi leo núi của map đó.
+      - Khi bấm `PauseBtn`: Tắt `GamePanel`, đóng màn chơi leo núi và quay trở lại ngay màn hình chọn map (`MapManagerPanel`).
+      - Khi bấm `ClimbBtn`: Giữ trạng thái chờ (chưa có tác dụng, sẵn sàng phát triển tiếp).
+      - Đảm bảo `GamePanel` tự động ẩn khi ở màn hình chính `Home` hoặc `MapManagerPanel`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 200-340 modified)
+  - `Assets/Scripts/StationWorldItem.cs` (viết lại tối giản)
+  - `Assets/Scripts/MapManager.cs` (lines 15-30, 130-175, 290-335 modified)
+- **Ảnh hưởng**: Hoàn thiện đúng luồng UI màn chơi: Trạm không còn bị click, nút Pause trở về màn hình chọn map chuẩn xác, Climb sẵn sàng mở rộng.
+
+### [2026-10-13 07:50] — feat(gameplay): implement World Space mountain setup with station transform persistence and 2D camera controls
+- **Tác vụ**:
+  - Cập nhật [QuizData.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/QuizData.cs):
+    - Bổ sung cấu trúc `StationPos` (chuyển đổi 2 chiều mượt mà với `Vector2`) để lưu trữ chính xác tọa độ World Transform `(x, y)` vào JSON.
+    - Thêm danh sách `stationPositions` vào `MapData` để lưu vĩnh viễn tọa độ các trạm của từng map vào `quiz_save.json`.
+  - Tạo mới [StationWorldItem.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/StationWorldItem.cs):
+    - Quản lý Prefab trạm 2D trong không gian World: nhận diện click chuột (`OnMouseDown`), hiệu ứng hover co giãn, nhãn text tầng/đỉnh núi và đổi màu theo độ cao.
+  - Tái cấu trúc [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):
+    - Hỗ trợ ảnh ngọn núi to trong World Space (dùng `SpriteRenderer` tự động lấy kích thước `bounds` hoặc Transform World).
+    - Tự động kiểm tra: Nếu bản đồ đã lưu tọa độ các trạm thì tải lại đúng vị trí đó; nếu chưa có thì random đường mòn ngoằn ngoèo lên đỉnh núi và lưu ngay vào `MapData` & `quiz_save.json`.
+    - Vẽ đường mòn nối các trạm bằng `LineRenderer` trong World Space.
+    - Tích hợp bộ điều khiển Camera 2D: Kéo rê chuột (Mouse Drag) để di chuyển dọc sườn núi từ chân lên đỉnh và lăn chuột (Scroll Wheel) để phóng to/thu nhỏ (Zoom).
+    - Thêm nút tạo lại đường đi (`RegenerateMountainPath`) cho phép đổi dáng đường mòn mới bất cứ lúc nào.
+  - Cập nhật [MapManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MapManager.cs): Đồng bộ hóa callback lưu dữ liệu khi sinh trạm trong màn chơi.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuizData.cs` (lines 45-75 modified)
+  - `Assets/Scripts/StationWorldItem.cs` (file mới tạo)
+  - `Assets/Scripts/MountainStationManager.cs` (viết lại hoàn toàn)
+  - `Assets/Scripts/MapManager.cs` (lines 295-310 modified)
+- **Ảnh hưởng**: Đáp ứng trọn vẹn yêu cầu lưu trữ tọa độ World Transform cho từng trạm, hỗ trợ ảnh núi to và prefab station trong không gian 2D với camera kéo cuộn mượt mà.
+
 ### [2026-10-12 21:55] — feat(gameplay): implement mountain station layers spawning on play with custom station count and random trail offsets
 - **Tác vụ**:
   - Cập nhật [QuizData.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/QuizData.cs):

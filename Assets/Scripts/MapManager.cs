@@ -16,12 +16,21 @@ namespace QuizGame
         [Tooltip("Panel tạo và chỉnh sửa câu hỏi cho map")]
         [SerializeField] private EditMapPanelUI editPanel;
 
+        [Tooltip("Bảng giao diện trong màn chơi (GamePanel)")]
+        [SerializeField] private GameObject gamePanel;
+
         [Tooltip("Hệ thống sinh trạm leo núi khi bấm Play")]
         [SerializeField] private MountainStationManager mountainManager;
 
         [Header("--- NÚT BẤM (BUTTONS) ---")]
         [Tooltip("Nút Start ở màn hình chính để vào chọn map")]
         [SerializeField] private Button startBtn;
+
+        [Tooltip("Nút Pause trên GamePanel để quay về chọn map")]
+        [SerializeField] private Button pauseBtn;
+
+        [Tooltip("Nút Climb trên GamePanel")]
+        [SerializeField] private Button climbBtn;
 
         [Tooltip("Nút dấu '+' để tạo thêm map mới")]
         [SerializeField] private Button addMapBtn;
@@ -121,6 +130,28 @@ namespace QuizGame
                     snapScroll = mapPanel.GetComponentInChildren<CenterSnapScroll>(true);
                 }
             }
+
+            // Tìm GamePanel và các nút PauseBtn, ClimbBtn
+            if (gamePanel == null)
+            {
+                Transform t = FindChild(transform, "GamePanel");
+                if (t == null && transform.parent != null) t = FindChild(transform.parent, "GamePanel");
+                if (t != null) gamePanel = t.gameObject;
+            }
+
+            if (gamePanel != null)
+            {
+                if (pauseBtn == null)
+                {
+                    Transform t = FindChild(gamePanel.transform, "PauseBtn", "PauseButton", "Pause");
+                    if (t != null) pauseBtn = t.GetComponent<Button>();
+                }
+                if (climbBtn == null)
+                {
+                    Transform t = FindChild(gamePanel.transform, "ClimbBtn", "ClimbButton", "Climb");
+                    if (t != null) climbBtn = t.GetComponent<Button>();
+                }
+            }
         }
 
         private Transform FindChild(Transform parent, params string[] names)
@@ -144,6 +175,18 @@ namespace QuizGame
 
             if (backBtn != null)
                 backBtn.onClick.AddListener(OnBackButtonClicked);
+
+            if (pauseBtn != null)
+            {
+                pauseBtn.onClick.RemoveAllListeners();
+                pauseBtn.onClick.AddListener(OnPauseButtonClicked);
+            }
+
+            if (climbBtn != null)
+            {
+                climbBtn.onClick.RemoveAllListeners();
+                climbBtn.onClick.AddListener(OnClimbButtonClicked);
+            }
         }
 
         public void ShowHomeMenu()
@@ -151,6 +194,8 @@ namespace QuizGame
             if (homePanel != null) homePanel.SetActive(true);
             if (mapPanel != null) mapPanel.SetActive(false);
             if (editPanel != null) editPanel.gameObject.SetActive(false);
+            if (gamePanel != null) gamePanel.SetActive(false);
+            if (mountainManager != null) mountainManager.CloseMountain(triggerCallback: false);
         }
 
         public void OnStartButtonClicked()
@@ -158,6 +203,8 @@ namespace QuizGame
             if (homePanel != null) homePanel.SetActive(false);
             if (mapPanel != null) mapPanel.SetActive(true);
             if (editPanel != null) editPanel.gameObject.SetActive(false);
+            if (gamePanel != null) gamePanel.SetActive(false);
+            if (mountainManager != null) mountainManager.CloseMountain(triggerCallback: false);
 
             RefreshMapListUI();
             StartCoroutine(InitSnapRoutine());
@@ -283,7 +330,10 @@ namespace QuizGame
         {
             if (mapData == null) return;
 
+            if (homePanel != null) homePanel.SetActive(false);
             if (mapPanel != null) mapPanel.SetActive(false);
+            if (editPanel != null) editPanel.gameObject.SetActive(false);
+            if (gamePanel != null) gamePanel.SetActive(true);
 
             if (mountainManager == null)
             {
@@ -297,13 +347,60 @@ namespace QuizGame
                 }
             }
 
-            mountainManager.OpenMountain(mapData, () =>
+            mountainManager.OpenMountain(mapData, onBack: () =>
             {
-                // Khi bấm Back từ màn hình leo núi -> bật lại MapManagerPanel
-                if (mapPanel != null) mapPanel.SetActive(true);
-                RefreshMapListUI();
-                StartCoroutine(InitSnapRoutine());
+                OnPauseButtonClicked();
+            }, onSave: () =>
+            {
+                QuizSaveSystem.Save(saveData);
             });
+
+            Debug.Log($"[MapManager] Bắt đầu chơi: {mapData.mapName} (Số trạm: {mapData.stationCount})");
+        }
+
+        public void OnPauseButtonClicked()
+        {
+            if (gamePanel != null) gamePanel.SetActive(false);
+            if (mountainManager != null) mountainManager.CloseMountain(triggerCallback: false);
+
+            if (mapPanel == null)
+            {
+                Transform t = FindChild(transform, "MapManagerPanel", "MapPanel", "LevelPanel");
+                if (t != null) mapPanel = t.gameObject;
+            }
+
+            if (mapPanel != null)
+            {
+                mapPanel.SetActive(true);
+            }
+            else
+            {
+                if (homePanel != null) homePanel.SetActive(true);
+            }
+
+            // Đảm bảo Canvas không bị tắt nhầm
+            Canvas canvas = GetComponent<Canvas>();
+            if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+            if (canvas != null && !canvas.gameObject.activeSelf)
+            {
+                canvas.gameObject.SetActive(true);
+            }
+
+            RefreshMapListUI();
+            StartCoroutine(InitSnapRoutine());
+            Debug.Log("[MapManager] Đã bấm PauseBtn: Trở về MapManagerPanel thành công!");
+        }
+
+        public void OnClimbButtonClicked()
+        {
+            if (mountainManager != null)
+            {
+                mountainManager.MovePlayerToNextStation();
+            }
+            else
+            {
+                Debug.Log("[MapManager] Bấm ClimbBtn: Không tìm thấy MountainStationManager.");
+            }
         }
 
         private System.Collections.IEnumerator InitSnapRoutine()
