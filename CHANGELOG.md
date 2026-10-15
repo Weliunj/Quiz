@@ -22,6 +22,126 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-15 11:08] — feat(theme-bg): add mapBg sprite to ThemeSO and bind to MapImg in map list & mountainSprite in gameplay
+- **Tác vụ**:
+  - **Thêm trường Sprite `mapBg` vào `ThemeSO.cs`**:
+    - Bổ sung `public Sprite mapBg;` để cấu hình ảnh nền/background đại diện cho từng Theme (Rừng, Sa mạc, Băng tuyết...).
+  - **Cập nhật hiển thị thẻ map (`MapItemUI.cs`)**:
+    - Thêm tham chiếu `[SerializeField] private Image mapImg;` và cơ chế `AutoFindReferences()` tự động tìm Image `MapImg`, `MapImage`, `BgImg` trong hierarchy của `MapContent.prefab`.
+    - Trong hàm `Setup()`: Tự động tra cứu `ThemeSO` tương ứng với `data.themeId` và gán `mapImg.sprite = theme.mapBg`.
+  - **Cập nhật hiển thị nền ngọn núi (`MountainStationManager.cs`)**:
+    - Khi mở màn chơi (`OpenMountain(mapData)`), tự động tra cứu `ThemeSO` theo `currentMap.themeId` và cập nhật `mountainSprite.sprite = theme.mapBg` (nếu có).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/ThemeSO.cs` (lines 18-20 added)
+  - `Assets/Scripts/MapItemUI.cs` (lines 20-30, 41-47, 81-125, 148-158 modified)
+  - `Assets/Scripts/MountainStationManager.cs` (lines 44-48, 303-305, 665-717 modified)
+- **Ảnh hưởng**:
+  - Tự động hiển thị đúng hình nền map tương ứng với Theme trên danh sách bản đồ và khi leo núi gameplay, không cần gán thủ công bằng tay.
+
+### [2026-10-15 10:48] — feat(camera-zoom): fast-snap ease-out (70% fast snap + 30% smooth deceleration) for full overview and return to player
+- **Tác vụ**:
+  - **Tạo hàm nội suy `FastSnapEaseOut`**:
+    - Dựa trên phương trình Ease-Out Quartic (`1 - (1 - x)^4`), camera di chuyển cực nhanh đạt ~70-80% khoảng cách ngay ở giai đoạn đầu giống như một cú zoom tức thì (snap zoom), sau đó hãm phanh chậm dần êm ái ở 20-30% cuối chặng để có độ trượt và cảm giác chuyển động mượt mà.
+  - **Áp dụng đồng bộ cho cả 2 giai đoạn chuyển động của Camera**:
+    - **Giai đoạn Zoom toàn cảnh (Zoom Full)**: Phóng to góc nhìn cực nhanh rồi chậm êm dịu khi tới khung hình toàn cảnh ngọn núi.
+    - **Giai đoạn Quay về Player (Return to Player)**: Lướt nhanh về phía Player trong chớp mắt rồi giảm tốc mềm mại khi khóa mục tiêu vào nhân vật.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainStationManager.cs` (lines 850-955 modified)
+- **Ảnh hưởng**:
+  - Nhịp điệu máy quay dứt khoát, hiện đại, loại bỏ cảm giác chờ đợi rê máy lê thê nhưng vẫn giữ trọn vẹn sự êm ái và chuyển động điện ảnh ở điểm dừng.
+
+### [2026-10-15 10:30] — feat(station-rules): conditional inventory display (>=1) and 3-tries station quota with 0/3 blur lock
+- **Tác vụ**:
+  - **Ẩn / Hiện Item trên MainPanel theo số lượng sở hữu**:
+    - Khi bắt đầu màn chơi, tất cả item trên `MainPanel/ItemContainer` có số lượng `= 0` đều bị **ẩn** (`SetActive(false)`).
+    - Chỉ khi trả lời đúng và nhận thưởng (`quantity >= 1`), icon item đó mới tự động **hiện ra** trên thanh HUD kèm số lượng (ví dụ: `x1`, `x2`...).
+  - **Cơ chế giới hạn 3 lượt trả lời cho mỗi trạm dừng (`RemainText`)**:
+    - Text hiển thị số lượt tại trạm theo định dạng chuẩn phân số `3/3` khi mới vào trạm.
+    - Mỗi khi người chơi trả lời câu hỏi (bất kể **Đúng** hay **Sai / Hết giờ**): Số lượt giảm dần: `3/3` ➔ `2/3` ➔ `1/3` ➔ `0/3`.
+  - **Khóa trạm khi hết lượt (0/3)**:
+    - Khi đạt `0/3`: Toàn bộ các nút item còn lại trong trạm bị **làm mờ** (`alpha = 0.45`) và **khóa bấm** (`interactable = false`). Người chơi chỉ có thể bấm nút `ExitBtn` để ra ngoài tiếp tục leo núi.
+    - Khi thoát ra ngoài và quay lại (`Exit` ➔ `Join`), trạm vẫn bảo lưu trạng thái `0/3`, không cấp thêm lượt và các item vẫn bị khóa mờ.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (lines 70-95, 285-300, 365-440, 550-630, 1050-1090 modified)
+- **Ảnh hưởng**:
+  - Giao diện MainPanel gọn gàng, sạch sẽ hơn (chỉ hiện item đã có); luật chơi tại mỗi trạm rõ ràng, công bằng với đúng 3 cơ hội thử thách.
+
+### [2026-10-25 10:25] — feat(prefab-spawn): support standalone ItemBtn.prefab for dynamic station item instantiation
+- **Tác vụ**:
+  - Hỗ trợ việc xóa bỏ nút `ItemBtn` mẫu trên Scene và chuyển đổi hoàn toàn sang Prefab `Assets/Prefabs/ItemBtn.prefab`.
+  - Tự động nạp `ItemBtn.prefab` qua `AssetDatabase` trong hàm `AutoFindReferences` của `StationQuizController.cs` khi chưa được gán trong Inspector.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (lines 205-218 modified)
+- **Ảnh hưởng**:
+  - Bạn có thể xóa sạch các nút `ItemBtn` mẫu có sẵn trong Scene (`StationPanel/ItemContainer`), hệ thống sẽ tự động dùng file Prefab để sinh ra 5 item ngẫu nhiên mà không bị lỗi.
+
+### [2026-10-15 10:20] — fix(syntax): resolve CS0106 syntax error due to duplicated code block in StationQuizController.cs
+- **Tác vụ**:
+  - Loại bỏ đoạn code thừa bị lặp lại trong hàm `OnItemClicked` gây lệch cấu trúc dấu ngoặc nhọn `{}` và dẫn đến lỗi biên dịch `error CS0106: The modifier 'private' is not valid for this item`.
+  - Kiểm tra lại toàn bộ cấu trúc block method và class đảm bảo đóng mở ngoặc chuẩn xác 100%.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (lines 680-705 modified)
+- **Ảnh hưởng**:
+  - Mã nguồn C# đã biên dịch sạch sẽ, không còn lỗi compiler trong Unity Editor.
+
+### [2026-10-15 10:15] — feat(station-items): random spawn 5 theme items per station with persistent state on re-entry
+- **Tác vụ**:
+  - **Cơ chế sinh ngẫu nhiên 5 Item theo Theme cho từng trạm**:
+    - Khi người chơi lần đầu bước chân vào trạm (`ShowJoinPrompt` ➔ `OnJoinButtonClicked`), hệ thống tự động bốc ngẫu nhiên **5 item** từ danh sách `ThemeSO` hiện tại của map (cho phép trùng lặp item như hình ảnh đính kèm: `Campfire`, `Meat`...).
+    - Tự động gán Sprite Icon và tên hiển thị lên các nút `ItemBtn` trong `StationPanel/ItemContainer`.
+  - **Lưu giữ trạng thái Item khi rời khỏi và vào lại trạm (Persistent State)**:
+    - Quản lý qua `Dictionary<int, List<StationItemRuntimeData>> stationItemsState` theo chỉ số của từng trạm (`currentStationIndex`).
+    - Nếu đã từng vào trạm này trước đó, hệ thống giữ nguyên chính xác danh sách các item đã sinh lần đầu:
+      - Item đã trả lời **ĐÚNG**: Tiếp tục bị ẩn (`SetActive = false`).
+      - Item đã trả lời **SAI / HẾT GIỜ**: Tiếp tục bị làm mờ (`alpha = 0.45`) và khóa bấm (`interactable = false`).
+      - Item chưa trả lời: Giữ nguyên trạng thái sáng rõ và sẵn sàng mở câu hỏi khi bấm.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (lines 68-95, 260-280, 425-660, 940-1010 modified)
+- **Ảnh hưởng**:
+  - Đảm bảo trải nghiệm leo núi chân thực: Người chơi có thể tự do bấm `ExitBtn` ra ngoài ngắm cảnh núi non hoặc tiếp tục leo và khi bấm `JoinBtn` vào lại trạm cũ thì toàn bộ tiến trình câu đố và danh sách vật phẩm của trạm đó vẫn được bảo toàn nguyên vẹn.
+
+### [2026-10-15 10:05] — feat(theme-so): implement ScriptableObject for ItemSO and ThemeSO with icon sprite integration
+- **Tác vụ**:
+  - **Tạo mới ScriptableObject `ItemSO.cs`**:
+    - Chứa `itemId`, `itemName`, và `Sprite icon` để hiển thị ảnh trực quan lên `ItemImg`.
+    - Menu tạo asset: `Create ➔ Quiz ➔ Item Data`.
+  - **Tạo mới ScriptableObject `ThemeSO.cs`**:
+    - Chứa `themeId`, `themeName`, `List<ItemSO> themeItems`, và `themeColor`.
+    - Menu tạo asset: `Create ➔ Quiz ➔ Theme Data`.
+  - **Nâng cấp `StationQuizController.cs`**:
+    - Tự động nạp các `ThemeSO` có trong dự án.
+    - Đọc Sprite Icon từ `ItemSO` để gán vào `ItemImg` trong prefab `ItemContent`.
+  - **Nâng cấp `EditMapPanelUI.cs`**:
+    - Tự động nhận diện danh sách `ThemeSO` và duyệt qua các Theme đã tạo khi bấm `ThemeBtn`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/ItemSO.cs` (Tạo mới)
+  - `Assets/Scripts/ThemeSO.cs` (Tạo mới)
+  - `Assets/Scripts/StationQuizController.cs` (lines 55-65, 260-325 modified)
+  - `Assets/Scripts/EditMapPanelUI.cs` (lines 35-40, 725-780 modified)
+- **Ảnh hưởng**:
+  - Giờ đây có thể tạo và quản lý Item, Theme trực tiếp qua giao diện Unity Inspector mà không cần sửa code C#. Các icon ảnh của Item sẽ tự động hiển thị lên UI `MainPanel/ItemContainer`.
+
+### [2026-10-15 09:55] — feat(theme-items): integrate Theme-based item system and reward inventory counter on correct quiz answers
+- **Tác vụ**:
+  - **Mô hình hóa dữ liệu Theme & Item (`QuizData.cs`)**:
+    - Bổ sung class `ItemData` (id, name, quantity) và `ThemeData` (id, themeName, itemIds).
+    - Mở rộng `MapData` với `themeId` và danh sách các ID vật phẩm `itemIds` (mặc định Rừng xanh, Sa mạc, Băng tuyết, Núi lửa).
+  - **Hiển thị & Cộng dồn Item trên giao diện MainPanel (`StationQuizController.cs`)**:
+    - Tự động tìm và liên kết vùng chứa vật phẩm `GamePanel/MainPanel/ItemContainer` và prefab `ItemContent.prefab`.
+    - Khởi tạo các item theo danh sách ID của theme hiện tại với số lượng ban đầu `x0`.
+    - Khi người chơi trả lời **ĐÚNG** câu hỏi (`HandleCorrectAnswer`):
+      - Kích hoạt nhận thưởng `RewardThemeItem(1)`.
+      - Tăng số lượng item tương ứng và cập nhật trực quan lên text `QuanText` (ví dụ: `x1`, `x2`,...).
+  - **Tích hợp nút chọn Theme (`EditMapPanelUI.cs`)**:
+    - Liên kết nút `ThemeBtn` và text `themeNameText` trong `EditMapPanel/Other`.
+    - Cho phép bấm `ThemeBtn` để chuyển đổi tuần tự qua các Theme (Rừng Xanh, Sa Mạc, Băng Tuyết, Núi Lửa), tự động cập nhật danh sách `itemIds` và lưu vào dữ liệu bản đồ.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuizData.cs` (lines 63-115 modified)
+  - `Assets/Scripts/StationQuizController.cs` (lines 48-65, 160-180, 220-330, 700-720 modified)
+  - `Assets/Scripts/EditMapPanelUI.cs` (lines 30-40, 225-240, 410-420, 710-770 modified)
+- **Ảnh hưởng**:
+  - Người chơi giờ đây có thể thấy các Item theo Theme của map trên thanh HUD `MainPanel/ItemContainer` và nhận thưởng số lượng item trực quan mỗi khi giải đúng câu đố trong trạm.
+
 ### [2026-10-15 09:41] — feat(quiz-gameplay): integrate station question system (StationPanel & QuestPanel) with timer, skip, and answer feedback
 - **Tác vụ**:
   - **Tạo mới component `StationQuizController.cs`**:

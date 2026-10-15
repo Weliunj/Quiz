@@ -61,6 +61,50 @@ namespace QuizGame
     }
 
     [Serializable]
+    public class ItemData
+    {
+        public string id;
+        public string name;
+        public int quantity;
+
+        public ItemData()
+        {
+            id = "item_1";
+            name = "Item";
+            quantity = 0;
+        }
+
+        public ItemData(string itemId, string itemName, int initQuantity = 0)
+        {
+            id = itemId;
+            name = itemName;
+            quantity = initQuantity;
+        }
+    }
+
+    [Serializable]
+    public class ThemeData
+    {
+        public string id;
+        public string themeName;
+        public List<string> itemIds = new List<string>();
+
+        public ThemeData()
+        {
+            id = "default";
+            themeName = "Mặc Định";
+            itemIds = new List<string>() { "item_1", "item_2", "item_3" };
+        }
+
+        public ThemeData(string themeId, string name, List<string> items)
+        {
+            id = themeId;
+            themeName = name;
+            itemIds = items ?? new List<string>();
+        }
+    }
+
+    [Serializable]
     public class MapData
     {
         public string id;
@@ -69,6 +113,10 @@ namespace QuizGame
         public List<StationPos> stationPositions = new List<StationPos>(); // Tọa độ World Transform của các trạm
         public List<QuestionData> questions = new List<QuestionData>();
 
+        // Cài đặt Theme & Item cho bản đồ
+        public string themeId = "theme_forest";
+        public List<string> itemIds = new List<string>() { "item_leaf", "item_gem", "item_potion" };
+
         public MapData()
         {
             id = Guid.NewGuid().ToString();
@@ -76,6 +124,8 @@ namespace QuizGame
             stationCount = 5;
             stationPositions = new List<StationPos>();
             questions = new List<QuestionData>();
+            themeId = "theme_forest";
+            itemIds = new List<string>() { "item_leaf", "item_gem", "item_potion" };
         }
 
         public MapData(string name, int stations = 5)
@@ -85,6 +135,8 @@ namespace QuizGame
             stationCount = Mathf.Max(1, stations);
             stationPositions = new List<StationPos>();
             questions = new List<QuestionData>();
+            themeId = "theme_forest";
+            itemIds = new List<string>() { "item_leaf", "item_gem", "item_potion" };
         }
     }
 
@@ -92,6 +144,7 @@ namespace QuizGame
     public class GameSaveData
     {
         public List<MapData> maps = new List<MapData>();
+        public List<ThemeData> themes = new List<ThemeData>();
     }
 
     public static class QuizSaveSystem

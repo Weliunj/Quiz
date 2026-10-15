@@ -41,6 +41,10 @@ namespace QuizGame
         [Range(0.2f, 0.98f)]
         [SerializeField] private float widthMarginFactor = 0.88f;
 
+        [Header("--- CẤU HÌNH THEME (THEME SETTINGS) ---")]
+        [Tooltip("Danh sách ThemeSO dùng để tra cứu ảnh nền ngọn núi mapBg")]
+        [SerializeField] private List<ThemeSO> availableThemes = new List<ThemeSO>();
+
         [Header("--- 2. PREFAB & KÍCH THƯỚC TRẠM (STATION SETTINGS) ---")]
         [Tooltip("Prefab của trạm trong World Space (nếu để trống sẽ tự tạo vòng tròn mặc định)")]
         [SerializeField] private GameObject stationPrefab;
@@ -295,6 +299,9 @@ namespace QuizGame
             {
                 titleText.text = $"🏔️ {currentMap.mapName} ({currentMap.stationCount} Trạm Đến Đỉnh)";
             }
+
+            // Cập nhật Sprite ngọn núi theo ThemeSO (mapBg)
+            ApplyThemeBackground(currentMap.themeId);
 
             // 1. Tải hoặc sinh mới các trạm ở dạng World Transform
             LoadOrGenerateStations();
@@ -655,6 +662,59 @@ namespace QuizGame
             }
         }
 
+        private ThemeSO FindThemeById(string themeId)
+        {
+            if (availableThemes == null || availableThemes.Count == 0)
+            {
+                ThemeSO[] loaded = Resources.FindObjectsOfTypeAll<ThemeSO>();
+                if (loaded != null && loaded.Length > 0)
+                {
+                    if (availableThemes == null) availableThemes = new List<ThemeSO>();
+                    availableThemes.AddRange(loaded);
+                }
+#if UNITY_EDITOR
+                if (availableThemes.Count == 0)
+                {
+                    string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
+                    foreach (var g in guids)
+                    {
+                        string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                        ThemeSO tSO = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
+                        if (tSO != null && !availableThemes.Contains(tSO))
+                        {
+                            availableThemes.Add(tSO);
+                        }
+                    }
+                }
+#endif
+            }
+
+            if (availableThemes != null && !string.IsNullOrEmpty(themeId))
+            {
+                return availableThemes.Find(t => t != null && t.themeId == themeId);
+            }
+
+            return null;
+        }
+
+        private void ApplyThemeBackground(string themeId)
+        {
+            if (mountainSprite == null)
+            {
+                mountainSprite = GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (mountainSprite != null)
+            {
+                ThemeSO theme = FindThemeById(themeId);
+                if (theme != null && theme.mapBg != null)
+                {
+                    mountainSprite.sprite = theme.mapBg;
+                    Debug.Log($"[MountainStationManager] Đã cập nhật ảnh ngọn núi (mountainSprite) theo Theme: '{theme.themeName}'");
+                }
+            }
+        }
+
         /// <summary>
         /// Lấy thông số chiều cao và bề ngang của ngọn núi trong World Space
         /// </summary>
@@ -851,8 +911,8 @@ namespace QuizGame
             // Dừng lại ở đỉnh núi 1 nhịp ngắm cảnh
             yield return new WaitForSeconds(summitArrivalDelay);
 
-            // GIAI ĐOẠN 2: CHIẾU FULL MAP (CHẬM VÀ MƯỢT MÀ ĐỂ NGẮM TOÀN BỘ NGỌN NÚI)
-            float zoomOutDuration = Mathf.Max(1.2f, zoomOverviewSpeed); // Chiếu full chậm rãi
+            // GIAI ĐOẠN 2: CHIẾU FULL MAP (BỨT TỐC NHANH 70% ĐẦU, HÃM PHANH MỀM MẠI 30% CUỐI)
+            float zoomOutDuration = Mathf.Max(0.7f, zoomOverviewSpeed);
             float zoomOutElapsed = 0f;
             Vector3 summitCamPos = worldCamera.transform.position;
 
@@ -897,7 +957,8 @@ namespace QuizGame
                 if (!isIntroPlaying) yield break;
                 zoomOutElapsed += Time.deltaTime;
                 float normalizedTime = Mathf.Clamp01(zoomOutElapsed / zoomOutDuration);
-                float t = SmoothStepCubic(normalizedTime);
+                // Đường cong Ease-Out mạnh: bứt tốc nhanh 70% đầu chặng và hãm phanh êm ái 30% cuối chặng
+                float t = FastSnapEaseOut(normalizedTime);
 
                 worldCamera.transform.position = Vector3.Lerp(summitCamPos, overviewCamPos, t);
                 if (worldCamera.orthographic)
@@ -910,8 +971,8 @@ namespace QuizGame
             // Dừng ngắm toàn cảnh ngọn núi
             yield return new WaitForSeconds(overviewHoldDuration);
 
-            // GIAI ĐOẠN 3: QUAY VỀ LẠI PLAYER (NHANH HƠN NHƯNG VẪN HÃM PHANH MƯỢT MÀ KHI TỚI ĐÍCH)
-            float returnDuration = Mathf.Max(0.5f, returnToPlayerSpeed); // Quay về nhanh
+            // GIAI ĐOẠN 3: QUAY VỀ LẠI PLAYER (BỨT TỐC TỨC THÌ 70% ĐẦU, HÃM PHANH MƯỢT MÀ 30% CUỐI)
+            float returnDuration = Mathf.Max(0.6f, returnToPlayerSpeed);
             float returnElapsed = 0f;
             Vector3 returnStartPos = worldCamera.transform.position;
             float returnStartSize = worldCamera.orthographic ? worldCamera.orthographicSize : targetOverviewSize;
@@ -921,7 +982,8 @@ namespace QuizGame
                 if (!isIntroPlaying) yield break;
                 returnElapsed += Time.deltaTime;
                 float normalizedTime = Mathf.Clamp01(returnElapsed / returnDuration);
-                float t = SmoothStepCubic(normalizedTime);
+                // Đường cong Ease-Out mạnh: bứt tốc nhanh 70% đầu chặng và hãm phanh êm ái 30% cuối chặng
+                float t = FastSnapEaseOut(normalizedTime);
 
                 Vector3 currentTargetPlayerPos = (currentPlayerObj != null)
                     ? currentPlayerObj.transform.position
@@ -938,6 +1000,18 @@ namespace QuizGame
 
             // Kết thúc Intro và kích hoạt Camera điều khiển / theo dõi người chơi
             FinishIntroSequence();
+        }
+
+        /// <summary>
+        /// Đường cong chuyển động tức thì có kiểm soát (Fast Snap & Smooth Deceleration):
+        /// Đạt khoảng 70-80% quãng đường cực nhanh ở phần đầu, sau đó hãm phanh chậm dần êm ái ở 20-30% cuối.
+        /// </summary>
+        private float FastSnapEaseOut(float x)
+        {
+            x = Mathf.Clamp01(x);
+            // Ease-Out Quartic / Quintic: 1 - (1 - x)^4
+            float inv = 1f - x;
+            return 1f - (inv * inv * inv * inv);
         }
 
         /// <summary>

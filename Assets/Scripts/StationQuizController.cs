@@ -49,12 +49,62 @@ namespace QuizGame
         [Tooltip("Thời gian làm bài cho mỗi câu hỏi (giây)")]
         [SerializeField] private float questionTimeLimit = 20f;
 
+        [Header("--- 5. UI ITEM INVENTORY (MAINPANEL) ---")]
+        [Tooltip("Vùng chứa Item trong MainPanel (GamePanel/MainPanel/ItemContainer)")]
+        [SerializeField] private Transform mainItemContainer;
+
+        [Tooltip("Prefab của ItemContent (chứa ItemImg và QuanText)")]
+        [SerializeField] private GameObject itemContentPrefab;
+
+        [Tooltip("Danh sách cấu hình các ThemeSO có trong game (kéo các ThemeSO vào đây hoặc tự động nạp từ Resources)")]
+        [SerializeField] private List<ThemeSO> availableThemes = new List<ThemeSO>();
+
+        // Lưu trữ số lượng item nhận được trong map hiện tại: itemId -> quantity
+        private Dictionary<string, int> inventoryItems = new Dictionary<string, int>();
+        // Tham chiếu các UI element tương ứng với từng itemId
+        private Dictionary<string, TMP_Text> itemQuantityTexts = new Dictionary<string, TMP_Text>();
+        // Tham chiếu icon của từng item
+        private Dictionary<string, ItemSO> itemDataLookup = new Dictionary<string, ItemSO>();
+
+        [Header("--- 6. QUẢN LÝ ITEM TRẠM DỪNG (STATION ITEMS) ---")]
+        [Tooltip("Số lượng item ngẫu nhiên sinh ra mỗi trạm (mặc định 5)")]
+        [SerializeField] private int itemsPerStation = 5;
+
+        [Tooltip("Số lượt trả lời tối đa tại mỗi trạm (mặc định 3 lượt)")]
+        [SerializeField] private int maxTriesPerStation = 3;
+
+        [Tooltip("Prefab hoặc mẫu nút Item trong StationPanel/ItemContainer (nếu để trống sẽ tự lấy con đầu tiên làm mẫu)")]
+        [SerializeField] private GameObject stationItemPrefab;
+
+        private int currentStationIndex = 0;
+
+        // Lưu số lượt chơi còn lại của từng trạm: stationIndex -> remaining tries (ví dụ: 3, 2, 1, 0)
+        private Dictionary<int, int> stationRemainingTries = new Dictionary<int, int>();
+
+        // Lưu trạng thái item đã sinh của từng trạm: stationIndex -> danh sách dữ liệu các item của trạm đó
+        public class StationItemRuntimeData
+        {
+            public string itemId;
+            public string displayName;
+            public Sprite icon;
+            public bool isAnsweredCorrect = false; // Đã đúng -> ẩn
+            public bool isAnsweredWrong = false;   // Đã sai -> làm mờ
+            public Button runtimeBtn;
+        }
+
+        private Dictionary<int, List<StationItemRuntimeData>> stationItemsState = new Dictionary<int, List<StationItemRuntimeData>>();
+        private GameObject cachedStationItemTemplate;
+
+        // Lưu các GameObject của item trên MainPanel để ẩn/hiện theo số lượng
+        private Dictionary<string, GameObject> mainItemObjects = new Dictionary<string, GameObject>();
+
         private MapData currentMap;
         private List<QuestionData> poolQuestions = new List<QuestionData>();
         private List<QuestionData> unusedQuestions = new List<QuestionData>();
 
         private List<Button> spawnedItems = new List<Button>();
         private Button currentActiveItemBtn;
+        private StationItemRuntimeData currentActiveItemData;
 
         private Coroutine timerCoroutine;
         private float currentTimeLeft = 0f;
@@ -145,6 +195,33 @@ namespace QuizGame
                 Transform t = FindChildRecursive(root, "JoinBtn", "JoinButton", "Join");
                 if (t != null) joinBtn = t.GetComponent<Button>();
             }
+
+            // Tìm ItemContainer trong MainPanel (GamePanel/MainPanel/ItemContainer)
+            if (mainItemContainer == null)
+            {
+                Transform mainPanelTransform = FindChildRecursive(root, "MainPanel");
+                if (mainPanelTransform != null)
+                {
+                    Transform t = FindChildRecursive(mainPanelTransform, "ItemContainer");
+                    if (t != null) mainItemContainer = t;
+                }
+            }
+
+            // Load prefab ItemContent nếu chưa có
+            if (itemContentPrefab == null)
+            {
+#if UNITY_EDITOR
+                itemContentPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/ItemContent.prefab");
+#endif
+            }
+
+            // Load prefab ItemBtn (cho StationPanel/ItemContainer) nếu chưa gán
+            if (stationItemPrefab == null)
+            {
+#if UNITY_EDITOR
+                stationItemPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/ItemBtn.prefab");
+#endif
+            }
         }
 
         private Transform FindChildRecursive(Transform parent, params string[] names)
@@ -203,9 +280,15 @@ namespace QuizGame
         /// </summary>
         public void InitForMap(MapData map)
         {
+            AutoFindReferences();
             currentMap = map;
             poolQuestions.Clear();
             unusedQuestions.Clear();
+
+            // Reset trạng thái các trạm dừng khi load map mới
+            stationItemsState.Clear();
+            stationRemainingTries.Clear();
+            currentStationIndex = 0;
 
             if (map != null && map.questions != null)
             {
@@ -213,8 +296,160 @@ namespace QuizGame
                 unusedQuestions.AddRange(map.questions);
             }
 
+            InitThemeInventory(map);
+
             HideAllStationPanels();
             if (joinBtn != null) joinBtn.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Khởi tạo danh sách Item theo Theme lên MainPanel UI
+        /// </summary>
+        private void InitThemeInventory(MapData map)
+        {
+            inventoryItems.Clear();
+            itemQuantityTexts.Clear();
+            itemDataLookup.Clear();
+
+            // Tự động load ThemeSO nếu chưa gán trong Inspector
+            if (availableThemes == null || availableThemes.Count == 0)
+            {
+#if UNITY_EDITOR
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
+                foreach (var g in guids)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                    ThemeSO tSO = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
+                    if (tSO != null && !availableThemes.Contains(tSO))
+                    {
+                        availableThemes.Add(tSO);
+                    }
+                }
+#endif
+            }
+
+            // Tìm ThemeSO khớp với themeId của map
+            ThemeSO matchedTheme = null;
+            if (availableThemes != null && map != null)
+            {
+                matchedTheme = availableThemes.Find(t => t != null && t.themeId == map.themeId);
+            }
+
+            if (matchedTheme != null && matchedTheme.themeItems != null && matchedTheme.themeItems.Count > 0)
+            {
+                foreach (var itemSO in matchedTheme.themeItems)
+                {
+                    if (itemSO != null)
+                    {
+                        string id = string.IsNullOrEmpty(itemSO.itemId) ? itemSO.name : itemSO.itemId;
+                        inventoryItems[id] = 0;
+                        itemDataLookup[id] = itemSO;
+                    }
+                }
+            }
+            else
+            {
+                // Fallback nếu chưa tạo ThemeSO
+                List<string> items = (map != null && map.itemIds != null && map.itemIds.Count > 0)
+                    ? map.itemIds
+                    : new List<string>() { "item_1", "item_2", "item_3" };
+
+                foreach (var id in items)
+                {
+                    inventoryItems[id] = 0;
+                }
+            }
+
+            SetupMainPanelItemUI();
+        }
+
+        /// <summary>
+        /// Đồng bộ hiển thị kho đồ trên ItemContainer (MainPanel).
+        /// QUY TẮC: Item chỉ HIỂN THỊ khi số lượng >= 1, nếu = 0 sẽ ẩn đi.
+        /// </summary>
+        private void SetupMainPanelItemUI()
+        {
+            if (mainItemContainer == null) return;
+
+            // Xóa sạch các child cũ nếu đã sinh trước đó
+            for (int i = mainItemContainer.childCount - 1; i >= 0; i--)
+            {
+                Destroy(mainItemContainer.GetChild(i).gameObject);
+            }
+
+            itemQuantityTexts.Clear();
+            mainItemObjects.Clear();
+
+            foreach (var kvp in inventoryItems)
+            {
+                string itemId = kvp.Key;
+                int count = kvp.Value;
+
+                GameObject itemObj = null;
+                if (itemContentPrefab != null)
+                {
+                    itemObj = Instantiate(itemContentPrefab, mainItemContainer);
+                }
+                else
+                {
+                    // Fallback tạo nhanh GameObject nếu không có prefab
+                    itemObj = new GameObject($"Item_{itemId}", typeof(RectTransform));
+                    itemObj.transform.SetParent(mainItemContainer, false);
+                }
+
+                itemObj.name = $"ItemContent_{itemId}";
+                mainItemObjects[itemId] = itemObj;
+
+                // Chỉ hiển thị nếu số lượng >= 1
+                itemObj.SetActive(count >= 1);
+
+                // Cập nhật Sprite Icon nếu có ItemSO
+                if (itemDataLookup.TryGetValue(itemId, out ItemSO itemSO) && itemSO != null && itemSO.icon != null)
+                {
+                    Image img = itemObj.GetComponentInChildren<Image>(true);
+                    if (img != null)
+                    {
+                        img.sprite = itemSO.icon;
+                        img.color = Color.white;
+                    }
+                }
+
+                // Tìm QuanText trong ItemContent
+                TMP_Text quanText = itemObj.GetComponentInChildren<TMP_Text>(true);
+                if (quanText != null)
+                {
+                    quanText.text = $"x{count}";
+                    itemQuantityTexts[itemId] = quanText;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Thêm số lượng cho item ngẫu nhiên (hoặc item chỉ định) thuộc Theme khi trả lời đúng
+        /// </summary>
+        public void RewardThemeItem(int amount = 1)
+        {
+            if (inventoryItems == null || inventoryItems.Count == 0) return;
+
+            // Chọn 1 item id từ theme của map hiện tại
+            List<string> keys = new List<string>(inventoryItems.Keys);
+            string chosenId = keys[UnityEngine.Random.Range(0, keys.Count)];
+
+            inventoryItems[chosenId] += amount;
+            int newCount = inventoryItems[chosenId];
+
+            // Nếu số lượng >= 1 thì hiển thị đối tượng này trên MainPanel
+            if (mainItemObjects.TryGetValue(chosenId, out GameObject obj) && obj != null)
+            {
+                obj.SetActive(newCount >= 1);
+            }
+
+            if (itemQuantityTexts.TryGetValue(chosenId, out TMP_Text textComp) && textComp != null)
+            {
+                textComp.text = $"x{newCount}";
+            }
+
+            Debug.Log($"[StationQuizController] Nhận được +{amount} {chosenId}! Tổng hiện có: {newCount}");
         }
 
         /// <summary>
@@ -223,6 +458,8 @@ namespace QuizGame
         public void ShowJoinPrompt(int stationIndex)
         {
             AutoFindReferences();
+            currentStationIndex = stationIndex;
+
             if (joinBtn != null)
             {
                 joinBtn.gameObject.SetActive(true);
@@ -286,35 +523,194 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Khởi tạo các item có sẵn trong ItemContainer (tự tìm các Button item có sẵn)
+        /// Sinh ngẫu nhiên 5 item thuộc Theme cho trạm nếu là lần đầu bước vào,
+        /// hoặc giữ nguyên đúng trạng thái của các item nếu out trạm rồi vào lại.
         /// </summary>
         private void SetupStationItems()
         {
             spawnedItems.Clear();
+            if (itemContainer == null) return;
 
-            if (itemContainer != null)
+            // Lưu trữ mẫu nút Item đầu tiên làm template nếu chưa có prefab
+            if (cachedStationItemTemplate == null)
             {
-                Button[] childButtons = itemContainer.GetComponentsInChildren<Button>(true);
-                foreach (var btn in childButtons)
+                if (stationItemPrefab != null)
                 {
+                    cachedStationItemTemplate = stationItemPrefab;
+                }
+                else if (itemContainer.childCount > 0)
+                {
+                    cachedStationItemTemplate = itemContainer.GetChild(0).gameObject;
+                }
+            }
+
+            // Kiểm tra xem trạm hiện tại đã sinh danh sách item lần đầu chưa
+            if (!stationItemsState.ContainsKey(currentStationIndex))
+            {
+                // Lần đầu vào trạm -> sinh ngẫu nhiên 5 item từ Theme hiện tại
+                List<StationItemRuntimeData> newStationItems = GenerateRandomItemsForStation(itemsPerStation);
+                stationItemsState[currentStationIndex] = newStationItems;
+            }
+
+            // Kiểm tra số lượt còn lại của trạm này (mặc định maxTriesPerStation = 3)
+            if (!stationRemainingTries.ContainsKey(currentStationIndex))
+            {
+                stationRemainingTries[currentStationIndex] = maxTriesPerStation;
+            }
+
+            int currentTries = stationRemainingTries[currentStationIndex];
+            bool isStationOutOfTries = (currentTries <= 0);
+
+            List<StationItemRuntimeData> currentStationList = stationItemsState[currentStationIndex];
+
+            // Dọn dẹp các nút hiện tại trong itemContainer để vẽ lại theo trạng thái lưu trữ
+            // Nếu dùng template là con thì ẩn tạm thay vì xóa ngay lập tức
+            for (int i = itemContainer.childCount - 1; i >= 0; i--)
+            {
+                GameObject child = itemContainer.GetChild(i).gameObject;
+                if (child == cachedStationItemTemplate)
+                {
+                    child.SetActive(false); // Ẩn template gốc
+                }
+                else
+                {
+                    Destroy(child);
+                }
+            }
+
+            // Tạo các nút ItemBtn hiển thị trên giao diện theo trạng thái đã lưu
+            foreach (var itemData in currentStationList)
+            {
+                GameObject btnObj = null;
+                if (cachedStationItemTemplate != null)
+                {
+                    btnObj = Instantiate(cachedStationItemTemplate, itemContainer);
+                }
+                else
+                {
+                    btnObj = new GameObject($"ItemBtn_{itemData.itemId}", typeof(RectTransform), typeof(Button), typeof(Image));
+                    btnObj.transform.SetParent(itemContainer, false);
+                }
+
+                btnObj.name = $"ItemBtn_{itemData.itemId}";
+                Button btn = btnObj.GetComponent<Button>();
+                if (btn == null) btn = btnObj.AddComponent<Button>();
+
+                itemData.runtimeBtn = btn;
+
+                // Cập nhật Sprite Icon cho nút nếu ItemSO có icon
+                if (itemData.icon != null)
+                {
+                    Image btnImg = btnObj.GetComponent<Image>();
+                    if (btnImg != null)
+                    {
+                        btnImg.sprite = itemData.icon;
+                        btnImg.color = Color.white;
+                    }
+                }
+
+                // Cập nhật text hiển thị (nếu có Text TMP con)
+                TMP_Text btnText = btnObj.GetComponentInChildren<TMP_Text>(true);
+                if (btnText != null)
+                {
+                    btnText.text = string.IsNullOrEmpty(itemData.displayName) ? "Quest" : itemData.displayName;
+                }
+
+                // Áp dụng trạng thái đã lưu:
+                // 1. Đã trả lời ĐÚNG -> biến mất
+                // 2. Đã trả lời SAI hoặc HẾT LƯỢT TRẠM (0/3) -> làm mờ, khóa tương tác
+                // 3. Chưa trả lời và trạm còn lượt -> bình thường
+                if (itemData.isAnsweredCorrect)
+                {
+                    btnObj.SetActive(false);
+                }
+                else if (itemData.isAnsweredWrong || isStationOutOfTries)
+                {
+                    btnObj.SetActive(true);
+                    SetButtonOpacity(btn, 0.45f);
+                    btn.interactable = false;
                     spawnedItems.Add(btn);
-                    btn.gameObject.SetActive(true);
+                }
+                else
+                {
+                    btnObj.SetActive(true);
                     SetButtonOpacity(btn, 1f);
                     btn.interactable = true;
+                    spawnedItems.Add(btn);
 
+                    StationItemRuntimeData capturedData = itemData;
                     btn.onClick.RemoveAllListeners();
-                    Button capturedBtn = btn;
-                    btn.onClick.AddListener(() => OnItemClicked(capturedBtn));
+                    btn.onClick.AddListener(() => OnItemClicked(btn, capturedData));
                 }
             }
         }
 
         /// <summary>
+        /// Tạo danh sách ngẫu nhiên số lượng item từ Theme hiện tại của map (có thể trùng item)
+        /// </summary>
+        private List<StationItemRuntimeData> GenerateRandomItemsForStation(int count)
+        {
+            List<StationItemRuntimeData> list = new List<StationItemRuntimeData>();
+
+            // Lấy danh sách item từ Theme hiện tại
+            List<ItemSO> candidateItems = new List<ItemSO>();
+
+            ThemeSO matchedTheme = null;
+            if (availableThemes != null && currentMap != null)
+            {
+                matchedTheme = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+            }
+
+            if (matchedTheme != null && matchedTheme.themeItems != null && matchedTheme.themeItems.Count > 0)
+            {
+                candidateItems.AddRange(matchedTheme.themeItems);
+            }
+            else
+            {
+                // Nếu chưa có ThemeSO, lấy từ dictionary lookup hoặc tạo placeholder
+                foreach (var kvp in itemDataLookup)
+                {
+                    if (kvp.Value != null) candidateItems.Add(kvp.Value);
+                }
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                StationItemRuntimeData itm = new StationItemRuntimeData();
+                if (candidateItems.Count > 0)
+                {
+                    // Random ngẫu nhiên (cho phép trùng lặp)
+                    ItemSO picked = candidateItems[UnityEngine.Random.Range(0, candidateItems.Count)];
+                    itm.itemId = string.IsNullOrEmpty(picked.itemId) ? picked.name : picked.itemId;
+                    itm.displayName = picked.itemName;
+                    itm.icon = picked.icon;
+                }
+                else
+                {
+                    // Fallback nếu không có item nào được định nghĩa
+                    string fbId = (currentMap != null && currentMap.itemIds != null && currentMap.itemIds.Count > 0)
+                        ? currentMap.itemIds[UnityEngine.Random.Range(0, currentMap.itemIds.Count)]
+                        : $"item_{i + 1}";
+                    itm.itemId = fbId;
+                    itm.displayName = fbId;
+                    itm.icon = null;
+                }
+
+                itm.isAnsweredCorrect = false;
+                itm.isAnsweredWrong = false;
+                list.Add(itm);
+            }
+
+            return list;
+        }
+
+        /// <summary>
         /// Bấm vào 1 Item trong StationPanel để mở QuestPanel và hiển thị câu hỏi ngẫu nhiên
         /// </summary>
-        public void OnItemClicked(Button itemBtn)
+        public void OnItemClicked(Button itemBtn, StationItemRuntimeData itemData = null)
         {
             currentActiveItemBtn = itemBtn;
+            currentActiveItemData = itemData;
 
             QuestionData q = PickNextQuestion();
             if (q == null)
@@ -569,9 +965,16 @@ namespace QuizGame
         /// - Giảm số remain còn 2/3 (hoặc giảm số item yêu cầu)
         /// - Item (nút đó) biến mất (SetActive = false)
         /// - Đóng QuestPanel
+        /// - Tăng số lượng item thuộc Theme và cập nhật hiển thị lên MainPanel
+        /// - Ghi nhận trạng thái vào bộ nhớ trạm để khi vào lại vẫn ẩn item này
         /// </summary>
         private void HandleCorrectAnswer()
         {
+            if (currentActiveItemData != null)
+            {
+                currentActiveItemData.isAnsweredCorrect = true;
+            }
+
             if (currentActiveItemBtn != null)
             {
                 currentActiveItemBtn.gameObject.SetActive(false);
@@ -582,15 +985,24 @@ namespace QuizGame
             CloseQuestPanel();
             ReduceRemainingCount();
             UpdateRemainText();
+
+            // Nhận thưởng item theo Theme hiển thị lên MainPanel/ItemContainer
+            RewardThemeItem(1);
         }
 
         /// <summary>
         /// Trả lời SAI:
         /// - Làm mờ nút item đó
         /// - Đóng QuestPanel
+        /// - Ghi nhận trạng thái vào bộ nhớ trạm để khi vào lại vẫn làm mờ item này
         /// </summary>
         private void HandleWrongAnswer()
         {
+            if (currentActiveItemData != null)
+            {
+                currentActiveItemData.isAnsweredWrong = true;
+            }
+
             if (currentActiveItemBtn != null)
             {
                 SetButtonOpacity(currentActiveItemBtn, 0.45f);
@@ -606,9 +1018,15 @@ namespace QuizGame
         /// Hết thời gian:
         /// - Giảm remain còn 2/3
         /// - Làm mờ nút item
+        /// - Ghi nhận trạng thái vào bộ nhớ trạm
         /// </summary>
         private void HandleTimeout()
         {
+            if (currentActiveItemData != null)
+            {
+                currentActiveItemData.isAnsweredWrong = true;
+            }
+
             if (currentActiveItemBtn != null)
             {
                 SetButtonOpacity(currentActiveItemBtn, 0.45f);
@@ -630,37 +1048,52 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Giảm giá trị remain còn 2/3
+        /// Giảm số lượt trả lời của trạm (ví dụ từ 3/3 xuống 2/3, 1/3, 0/3).
+        /// Khi về 0/3: Làm mờ tất cả các item còn lại và khóa tương tác (chỉ có thể bấm Exit).
         /// </summary>
         private void ReduceRemainingCount()
         {
-            int currentActiveCount = 0;
-            foreach (var item in spawnedItems)
+            if (!stationRemainingTries.ContainsKey(currentStationIndex))
             {
-                if (item != null && item.gameObject.activeSelf && item.interactable)
-                {
-                    currentActiveCount++;
-                }
+                stationRemainingTries[currentStationIndex] = maxTriesPerStation;
             }
 
-            // Áp dụng giảm tỷ lệ 2/3
-            Debug.Log($"[StationQuizController] Cập nhật số item còn lại: {currentActiveCount}");
+            if (stationRemainingTries[currentStationIndex] > 0)
+            {
+                stationRemainingTries[currentStationIndex]--;
+            }
+
+            int currentTries = stationRemainingTries[currentStationIndex];
+            Debug.Log($"[StationQuizController] Trạm {currentStationIndex} còn lại: {currentTries}/{maxTriesPerStation} lượt trả lời!");
+
+            // Nếu hết lượt (0/3): Làm mờ toàn bộ các item còn lại trong trạm và khóa bấm
+            if (currentTries <= 0)
+            {
+                if (stationItemsState.ContainsKey(currentStationIndex))
+                {
+                    foreach (var itm in stationItemsState[currentStationIndex])
+                    {
+                        if (itm.runtimeBtn != null && !itm.isAnsweredCorrect)
+                        {
+                            SetButtonOpacity(itm.runtimeBtn, 0.45f);
+                            itm.runtimeBtn.interactable = false;
+                        }
+                    }
+                }
+            }
         }
 
         private void UpdateRemainText()
         {
             if (remainText == null) return;
 
-            int activeCount = 0;
-            foreach (var item in spawnedItems)
+            if (!stationRemainingTries.ContainsKey(currentStationIndex))
             {
-                if (item != null && item.gameObject.activeSelf)
-                {
-                    activeCount++;
-                }
+                stationRemainingTries[currentStationIndex] = maxTriesPerStation;
             }
 
-            remainText.text = $"Còn lại: {activeCount} item";
+            int currentTries = stationRemainingTries[currentStationIndex];
+            remainText.text = $"{currentTries}/{maxTriesPerStation}";
         }
 
         private void SetButtonOpacity(Button btn, float alpha)

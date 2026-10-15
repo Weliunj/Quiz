@@ -31,6 +31,15 @@ namespace QuizGame
         [Tooltip("Ô nhập tên màn chơi (NameLevel)")]
         [SerializeField] private TMP_InputField nameLevelInput;
 
+        [Tooltip("Nút chọn Theme cho bản đồ (ThemeBtn trong Other/MainPanel)")]
+        [SerializeField] private Button themeBtn;
+
+        [Tooltip("Text hiển thị tên Theme trên nút ThemeBtn")]
+        [SerializeField] private TMP_Text themeNameText;
+
+        [Tooltip("Danh sách ThemeSO tùy chọn cấu hình trong game")]
+        [SerializeField] private List<ThemeSO> availableThemes = new List<ThemeSO>();
+
         [Header("--- 2. KHU VỰC TẠO & SỬA CÂU HỎI (CREATE QUESTION) ---")]
         [Tooltip("Khu vực nhập câu hỏi & đáp án (CreateQuestion)")]
         [SerializeField] private GameObject createQuestionArea;
@@ -219,6 +228,15 @@ namespace QuizGame
                 }
             }
 
+            if (themeBtn == null)
+            {
+                themeBtn = FindButtonFlexible(mainRoot, "ThemeBtn", "SelectThemeBtn", "ThemeButton");
+            }
+            if (themeBtn != null && themeNameText == null)
+            {
+                themeNameText = themeBtn.GetComponentInChildren<TMP_Text>(true);
+            }
+
             // 2. Tìm CreateQuestion
             if (createQuestionArea == null)
             {
@@ -393,6 +411,12 @@ namespace QuizGame
             {
                 mainListBtn.onClick.RemoveAllListeners();
                 mainListBtn.onClick.AddListener(ShowListQuestionsMode);
+            }
+
+            if (themeBtn != null)
+            {
+                themeBtn.onClick.RemoveAllListeners();
+                themeBtn.onClick.AddListener(OnThemeButtonClicked);
             }
 
             if (createBtn != null)
@@ -686,7 +710,113 @@ namespace QuizGame
                 {
                     numberStationsInput.text = (currentMap.stationCount <= 0 ? 5 : currentMap.stationCount).ToString();
                 }
+
+                UpdateThemeBtnUI();
             }
+        }
+
+        private void UpdateThemeBtnUI()
+        {
+            if (themeNameText != null && currentMap != null)
+            {
+                string tName = GetThemeDisplayName(currentMap.themeId);
+                themeNameText.text = $"Theme: {tName}";
+            }
+        }
+
+        private void EnsureThemesLoaded()
+        {
+            if (availableThemes == null || availableThemes.Count == 0)
+            {
+#if UNITY_EDITOR
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
+                foreach (var g in guids)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                    ThemeSO tSO = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
+                    if (tSO != null && !availableThemes.Contains(tSO))
+                    {
+                        availableThemes.Add(tSO);
+                    }
+                }
+#endif
+            }
+        }
+
+        private string GetThemeDisplayName(string themeId)
+        {
+            EnsureThemesLoaded();
+            if (availableThemes != null)
+            {
+                ThemeSO found = availableThemes.Find(t => t != null && t.themeId == themeId);
+                if (found != null) return found.themeName;
+            }
+
+            switch (themeId)
+            {
+                case "theme_desert": return "Sa Mạc";
+                case "theme_ice": return "Băng Tuyết";
+                case "theme_volcano": return "Núi Lửa";
+                case "theme_forest":
+                default: return "Rừng Xanh";
+            }
+        }
+
+        private void OnThemeButtonClicked()
+        {
+            if (currentMap == null) return;
+            EnsureThemesLoaded();
+
+            if (availableThemes != null && availableThemes.Count > 0)
+            {
+                int curIdx = availableThemes.FindIndex(t => t != null && t.themeId == currentMap.themeId);
+                int nextIdx = (curIdx + 1) % availableThemes.Count;
+                ThemeSO nextTheme = availableThemes[nextIdx];
+
+                if (nextTheme != null)
+                {
+                    currentMap.themeId = nextTheme.themeId;
+                    currentMap.itemIds = new List<string>();
+                    if (nextTheme.themeItems != null)
+                    {
+                        foreach (var itm in nextTheme.themeItems)
+                        {
+                            if (itm != null)
+                            {
+                                currentMap.itemIds.Add(string.IsNullOrEmpty(itm.itemId) ? itm.name : itm.itemId);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Fallback nếu chưa tạo file ThemeSO nào
+                if (currentMap.themeId == "theme_forest")
+                {
+                    currentMap.themeId = "theme_desert";
+                    currentMap.itemIds = new List<string>() { "item_cactus", "item_fossil", "item_water" };
+                }
+                else if (currentMap.themeId == "theme_desert")
+                {
+                    currentMap.themeId = "theme_ice";
+                    currentMap.itemIds = new List<string>() { "item_snowflake", "item_crystal", "item_gem" };
+                }
+                else if (currentMap.themeId == "theme_ice")
+                {
+                    currentMap.themeId = "theme_volcano";
+                    currentMap.itemIds = new List<string>() { "item_fire", "item_ruby", "item_ember" };
+                }
+                else
+                {
+                    currentMap.themeId = "theme_forest";
+                    currentMap.itemIds = new List<string>() { "item_leaf", "item_gem", "item_potion" };
+                }
+            }
+
+            UpdateThemeBtnUI();
+            onDataChangedCallback?.Invoke();
+            Debug.Log($"[EditMapPanelUI] Đã chọn Theme: {GetThemeDisplayName(currentMap.themeId)} ({currentMap.themeId})");
         }
 
         /// <summary>

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e140e544dffac3c428196a0689454176, type: 3}
+  m_Name: SnowMountain
+  m_EditorClassIdentifier: Assembly-CSharp::QuizGame.ThemeSO
+  themeId: theme_mountain
+  themeName: Nui tuyet
+  themeItems:
+  - {fileID: 11400000, guid: 4d58d7ada16ecf54a98cd768520ea69f, type: 2}
+  - {fileID: 11400000, guid: 9bfe495509776064b9171f7086304ad8, type: 2}
+  mapBg: {fileID: -1098159029, guid: 04b141cd0870e5140ae2ca20a486dbf8, type: 3}
+  themeColor: {r: 0.60691816, g: 1, b: 0.94503653, a: 1}
