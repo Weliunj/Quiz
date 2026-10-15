@@ -454,14 +454,18 @@ namespace QuizGame
 
         public void OnClimbButtonClicked()
         {
-            if (mountainManager != null)
-            {
-                mountainManager.MovePlayerToNextStation();
-            }
-            else
+            if (mountainManager == null)
             {
                 Debug.Log("[MapManager] Bấm ClimbBtn: Không tìm thấy MountainStationManager.");
+                return;
             }
+
+            // Người chơi bắt đầu di chuyển trước 1 ít -> hiện rõ màn đen (theo closeDuration mặc định) -> gần tới trạm tiếp theo thì mở màn (theo openDuration mặc định)
+            mountainManager.MovePlayerToNextStation(
+                onComplete:     null,
+                onNearComplete: () => CutSceneTransition.Open(),
+                onDepart:       () => CutSceneTransition.Close()
+            );
         }
 
         private System.Collections.IEnumerator InitSnapRoutine()

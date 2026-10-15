@@ -22,6 +22,30 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-15 15:05] — feat(cutscene-transition): single-panel fade transition for climb and scene transitions
+- **Tác vụ**:
+  - **Tạo hệ thống chuyển cảnh `CutSceneTransition.cs`**:
+    - Quản lý hiệu ứng chuyển cảnh bằng 1 tấm màn đen duy nhất (`fadeImage` kết hợp `CanvasGroup`).
+    - Hỗ trợ 2 trạng thái mượt mà:
+      - **Hiện rõ (`Close()` / Fade In)**: Alpha tăng từ $0 \to 1$ để che kín màn hình (mặc định `0.22s`, có thể tùy biến `duration`).
+      - **Mờ dần (`Open()` / Fade Out)**: Alpha giảm từ $1 \to 0$ để lộ cảnh game ra (mặc định `0.35s`).
+    - Cung cấp các hàm tĩnh tiện dụng: `CutSceneTransition.Close()`, `Open()`, `DelayedClose()`, `CrossFade()`, `DelayedCrossFade()`.
+    - Tự động cấu hình RectTransform full screen, tự động thêm/tìm `CanvasGroup` và tự chặn tương tác nút bấm (`blocksRaycasts = true`) khi màn hình đang bị che.
+  - **Tích hợp trình tự chuyển cảnh khi bấm Climb (`MapManager.cs`, `MountainPlayerController.cs`, `MountainStationManager.cs`)**:
+    - Khi bấm **ClimbBtn**: Nhân vật lập tức bắt đầu bước đi (người chơi nhìn thấy nhân vật di chuyển trước).
+    - **Vừa đi được một đoạn ngắn (`departThreshold = 0.10` ~ 10% chặng đường)**: Kích hoạt `onDepart` $\to$ Màn đen hiện rõ nhanh (`CutSceneTransition.Close()`).
+    - **Trong lúc che đen**: Nhân vật tiếp tục leo và Camera bám theo.
+    - **Khi gần tới trạm tiếp theo (`nearThreshold = 0.78` ~ 78% chặng đường)**: Kích hoạt `onNearComplete` $\to$ Màn đen mờ dần (`CutSceneTransition.Open()`) để lộ trạm mới và nhân vật bước vào đích.
+    - Cả `departThreshold` và `nearThreshold` đều được đưa lên Inspector của `MountainPlayerController` để tùy chỉnh trực quan.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/CutSceneTransition.cs` (New file)
+  - `Assets/Scripts/MountainPlayerController.cs` (lines 70-140 modified)
+  - `Assets/Scripts/MountainStationManager.cs` (lines 325-365 modified)
+  - `Assets/Scripts/MapManager.cs` (lines 455-470 modified)
+- **Ảnh hưởng**:
+  - Trải nghiệm leo núi trở nên liền mạch và đậm chất điện ảnh: thấy nhân vật bắt đầu leo $\to$ chuyển cảnh đen $\to$ mở màn đón nhân vật tới trạm mới.
+  - Có thể tái sử dụng `CutSceneTransition` ở bất cứ đâu trong dự án khi cần chuyển màn hình hoặc nạp map mới.
+
 ### [2026-10-15 12:22] — feat(scale-adaptive-trail): dynamically adapt trail and station positions to MountainBg scale
 - **Tác vụ**:
   - **Tự động nhận diện thay đổi Scale và vị trí mốc (`MountainStationManager.cs`)**:

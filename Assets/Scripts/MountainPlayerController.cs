@@ -68,15 +68,51 @@ namespace QuizGame
             isPlayerMoving = false;
         }
 
-        public void MovePlayerAlongPath(int fromIndex, int toIndex, Vector3[] cachedPathPoints, Vector3 targetStationPos, int curveResolution, Action onComplete)
+        [Header("--- 2. CHUYỂN CẢNH TRÊN ĐƯỜNG LEO ---")]
+        [Tooltip("Tỷ lệ quãng đường đi được trước khi kích hoạt che màn (0.10 = vừa nhấc chân đi 10% chặng đường là xuất hiện màn đen ngay)")]
+        [Range(0.02f, 0.4f)]
+        [SerializeField] private float departThreshold = 0.10f;
+
+        [Tooltip("Tỷ lệ quãng đường khi gần tới trạm tiếp theo để mở màn (0.78 = tới 78% chặng đường thì mở dần lộ scene)")]
+        [Range(0.5f, 0.95f)]
+        [SerializeField] private float nearThreshold = 0.78f;
+
+        public void MovePlayerAlongPath(
+            int fromIndex, 
+            int toIndex, 
+            Vector3[] cachedPathPoints, 
+            Vector3 targetStationPos, 
+            int curveResolution, 
+            Action onComplete, 
+            Action onNearComplete = null, 
+            float customNearThreshold = -1f,
+            Action onDepart = null,
+            float customDepartThreshold = -1f)
         {
             if (isPlayerMoving) return;
-            StartCoroutine(MovePlayerAlongTrailRoutine(fromIndex, toIndex, cachedPathPoints, targetStationPos, curveResolution, onComplete));
+            float finalDepartThresh = (customDepartThreshold >= 0f) ? customDepartThreshold : departThreshold;
+            float finalNearThresh   = (customNearThreshold >= 0f)   ? customNearThreshold   : nearThreshold;
+
+            StartCoroutine(MovePlayerAlongTrailRoutine(
+                fromIndex, toIndex, cachedPathPoints, targetStationPos, curveResolution, 
+                onComplete, onNearComplete, finalNearThresh, onDepart, finalDepartThresh));
         }
 
-        private IEnumerator MovePlayerAlongTrailRoutine(int fromIndex, int toIndex, Vector3[] cachedPathPoints, Vector3 endStationPos, int curveResolution, Action onComplete)
+        private IEnumerator MovePlayerAlongTrailRoutine(
+            int fromIndex, 
+            int toIndex, 
+            Vector3[] cachedPathPoints, 
+            Vector3 endStationPos, 
+            int curveResolution, 
+            Action onComplete, 
+            Action onNearComplete, 
+            float targetNearThreshold,
+            Action onDepart,
+            float targetDepartThreshold)
         {
             isPlayerMoving = true;
+            bool departFired = false;
+            bool nearFired = false;
 
             int segPoints = Mathf.Max(2, curveResolution);
             int startIdx = fromIndex * segPoints;
@@ -94,6 +130,20 @@ namespace QuizGame
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / climbDuration);
                 float smoothT = Mathf.SmoothStep(0f, 1f, t);
+
+                // 1. Kích hoạt onDepart khi người chơi đã rời trạm cũ đi được 1 ít
+                if (!departFired && t >= targetDepartThreshold)
+                {
+                    departFired = true;
+                    onDepart?.Invoke();
+                }
+
+                // 2. Kích hoạt onNearComplete khi gần đến trạm kế tiếp
+                if (!nearFired && t >= targetNearThreshold)
+                {
+                    nearFired = true;
+                    onNearComplete?.Invoke();
+                }
 
                 Vector3 currentTrailPos;
                 if (canUsePathPoints)
@@ -117,6 +167,17 @@ namespace QuizGame
                 }
 
                 yield return null;
+            }
+
+            if (!departFired)
+            {
+                departFired = true;
+                onDepart?.Invoke();
+            }
+            if (!nearFired)
+            {
+                nearFired = true;
+                onNearComplete?.Invoke();
             }
 
             if (currentPlayerObj != null)

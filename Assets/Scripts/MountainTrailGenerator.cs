@@ -85,6 +85,7 @@ namespace QuizGame
 
         /// <summary>
         /// Sinh ngẫu nhiên danh sách tọa độ các trạm từ điểm Start lên đỉnh End (BottomPos -> TopPos)
+        /// Nếu số trạm * layerSpacingY vượt quá chiều cao hiện tại → tự động scale MountainBg.
         /// </summary>
         public void GenerateRandomStations(MapData currentMap, MountainBackground bg, Action onSave)
         {
@@ -96,6 +97,13 @@ namespace QuizGame
                 currentMap.stationPositions = new List<StationPos>();
             }
             currentMap.stationPositions.Clear();
+
+            // ── Auto-Scale: đảm bảo khoảng cách giữa các trạm luôn = layerSpacingY ──
+            if (bg != null && count > 1)
+            {
+                float requiredHeight = (count - 1) * layerSpacingY;
+                bg.AutoScaleToFitHeight(requiredHeight);
+            }
 
             Vector3 startPos = Vector3.zero;
             Vector3 endPos = Vector3.zero;
@@ -111,16 +119,16 @@ namespace QuizGame
             }
             else
             {
+                // Dùng layerSpacingY cố định. stepY = khoảng cách thực tế giữa 2 trạm
+                // Nếu BG đã được auto-scale, totalHeight sẽ >= requiredHeight
                 float totalHeight = endPos.y - startPos.y;
                 float stepY = totalHeight / (count - 1);
                 float centerX = (startPos.x + endPos.x) * 0.5f;
 
                 float scaleFactorX = 1f;
-                float scaleFactorY = 1f;
                 if (bg != null)
                 {
                     scaleFactorX = Mathf.Abs(bg.transform.lossyScale.x);
-                    scaleFactorY = Mathf.Abs(bg.transform.lossyScale.y);
                 }
 
                 // Bề ngang tối đa ở chân núi được nhân với scale của ngọn núi (MountainBg)
@@ -178,7 +186,7 @@ namespace QuizGame
                 }
                 QuizSaveSystem.Save(currentSave);
             }
-            Debug.Log($"[MountainTrailGenerator] Đã tạo ngẫu nhiên {count} trạm nối từ Start({startPos.x:F1}, {startPos.y:F1}) đến End({endPos.x:F1}, {endPos.y:F1})!");
+            Debug.Log($"[MountainTrailGenerator] Đã tạo {count} trạm | layerSpacingY = {layerSpacingY} | Tổng cao = {(endPos.y - startPos.y):F1} units");
         }
 
         /// <summary>

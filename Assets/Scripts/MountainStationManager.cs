@@ -48,6 +48,7 @@ namespace QuizGame
         private Action onBackCallback;
         private Action onSaveCallback;
         private int currentStationIndex = 0;
+        private Transform _stationContainer;
 
         public int CurrentStationIndex => currentStationIndex;
         public bool IsPlayerMoving => playerController != null && playerController.IsPlayerMoving;
@@ -95,8 +96,7 @@ namespace QuizGame
             }
             if (trailGenerator != null)
             {
-                Transform parentRoot = (mountainBg != null) ? mountainBg.transform : transform;
-                trailGenerator.AutoFindReferences(parentRoot);
+                trailGenerator.AutoFindReferences(GetStationContainer());
             }
 
             // 3. Tìm hoặc thêm CameraController
@@ -120,6 +120,33 @@ namespace QuizGame
             }
 
             EnsureUIHierarchy();
+        }
+
+        /// <summary>
+        /// Lấy hoặc tạo container chứa stations/player/trail.
+        /// Container này KHÔNG phải con của MountainBg → không bị ảnh hưởng khi BG auto-scale.
+        /// </summary>
+        private Transform GetStationContainer()
+        {
+            if (_stationContainer == null)
+            {
+                Transform existing = transform.Find("StationContainer");
+                if (existing != null)
+                {
+                    _stationContainer = existing;
+                }
+                else
+                {
+                    GameObject container = new GameObject("StationContainer");
+                    container.transform.SetParent(transform, false);
+                    container.transform.localScale = Vector3.one;
+                    container.transform.localPosition = Vector3.zero;
+                    _stationContainer = container.transform;
+                }
+            }
+            // Luôn đảm bảo scale = 1 (phòng trường hợp parent bị scale)
+            _stationContainer.localScale = Vector3.one;
+            return _stationContainer;
         }
 
         private Transform FindChild(Transform parent, params string[] names)
@@ -232,10 +259,9 @@ namespace QuizGame
                 }
             }
 
-            Transform parentRoot = (mountainBg != null) ? mountainBg.transform : transform;
             if (trailGenerator != null)
             {
-                trailGenerator.SpawnStations(currentMap, parentRoot);
+                trailGenerator.SpawnStations(currentMap, GetStationContainer());
             }
         }
 
@@ -246,10 +272,9 @@ namespace QuizGame
             currentStationIndex = Mathf.Clamp(currentStationIndex, 0, currentMap.stationPositions.Count - 1);
             Vector2 targetPos = currentMap.stationPositions[currentStationIndex].ToVector2();
 
-            Transform parentRoot = (mountainBg != null) ? mountainBg.transform : transform;
             if (playerController != null)
             {
-                playerController.SpawnOrUpdatePlayer(parentRoot, targetPos);
+                playerController.SpawnOrUpdatePlayer(GetStationContainer(), targetPos);
                 if (cameraController != null)
                 {
                     cameraController.SetPlayerTarget(playerController.PlayerTransform);
@@ -291,8 +316,7 @@ namespace QuizGame
             if (trailGenerator != null)
             {
                 trailGenerator.GenerateRandomStations(currentMap, mountainBg, onSaveCallback);
-                Transform parentRoot = (mountainBg != null) ? mountainBg.transform : transform;
-                trailGenerator.SpawnStations(currentMap, parentRoot);
+                trailGenerator.SpawnStations(currentMap, GetStationContainer());
             }
 
             SpawnOrUpdatePlayer();
@@ -300,9 +324,12 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Di chuyển nhân vật người chơi lên trạm tiếp theo dọc theo đường mòn
+        /// Di chuyển nhân vật người chơi lên trạm tiếp theo dọc theo đường mòn.
+        /// - onDepart: gọi khi người chơi đã rời trạm cũ đi trước 1 đoạn ngắn (~22% quãng đường) → kích hoạt che màn đen.
+        /// - onNearComplete: gọi khi gần đến trạm kế tiếp (~78% quãng đường) → kích hoạt mở màn mờ dần.
+        /// - onComplete: gọi khi người chơi đã đặt chân tới trạm đích hoàn toàn.
         /// </summary>
-        public void MovePlayerToNextStation(Action onComplete = null)
+        public void MovePlayerToNextStation(Action onComplete = null, Action onNearComplete = null, Action onDepart = null)
         {
             if (IsPlayerMoving) return;
             if (currentMap == null || currentMap.stationPositions == null) return;
@@ -323,13 +350,18 @@ namespace QuizGame
 
             if (playerController != null)
             {
-                playerController.MovePlayerAlongPath(fromIdx, toIdx, pathPoints, targetStationPos, curveRes, () =>
-                {
-                    currentStationIndex = toIdx;
-                    Debug.Log($"[MountainStationManager] Người chơi đã leo tới trạm {toIdx + 1} / {currentMap.stationPositions.Count}!");
-                    OnStationReached?.Invoke(toIdx);
-                    onComplete?.Invoke();
-                });
+                playerController.MovePlayerAlongPath(
+                    fromIdx, toIdx, pathPoints, targetStationPos, curveRes,
+                    onComplete: () =>
+                    {
+                        currentStationIndex = toIdx;
+                        Debug.Log($"[MountainStationManager] Người chơi đã leo tới trạm {toIdx + 1} / {currentMap.stationPositions.Count}!");
+                        OnStationReached?.Invoke(toIdx);
+                        onComplete?.Invoke();
+                    },
+                    onNearComplete: onNearComplete,
+                    onDepart: onDepart
+                );
             }
         }
 

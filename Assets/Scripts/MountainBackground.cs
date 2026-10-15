@@ -208,6 +208,49 @@ namespace QuizGame
             }
         }
 
+        /// <summary>
+        /// Tự động scale đồng đều X = Y của MountainBg (transform gốc) để khoảng cách BottomPos → TopPos
+        /// đạt đủ chiều cao requiredHeight. Scale uniform giữ tỷ lệ ảnh không bị méo.
+        /// Trả về true nếu đã scale, false nếu đã đủ hoặc không cần.
+        /// </summary>
+        public bool AutoScaleToFitHeight(float requiredHeight)
+        {
+            if (bottomPos == null || topPos == null) return false;
+
+            float currentHeight = Mathf.Abs(topPos.position.y - bottomPos.position.y);
+            if (currentHeight >= requiredHeight - 0.01f)
+            {
+                // Chiều cao hiện tại đã đủ, không cần scale
+                return false;
+            }
+
+            // Tính tỷ lệ scale cần thiết (uniform: X = Y)
+            // Vì TopPos/BottomPos là con của MountainBg, khi scale thì khoảng cách giữa chúng cũng scale theo
+            float scaleFactor = requiredHeight / currentHeight;
+
+            Vector3 oldScale = transform.localScale;
+            float newScale = Mathf.Abs(oldScale.y) * scaleFactor;
+            if (newScale < 0.001f) newScale = 1f;
+
+            transform.localScale = new Vector3(newScale, newScale, oldScale.z);
+
+            Debug.Log($"[MountainBackground] Auto-Scale uniform X=Y: {oldScale.x:F2} → {newScale:F2} " +
+                      $"(chiều cao {currentHeight:F1} → {requiredHeight:F1} world units)");
+            return true;
+        }
+
+        /// <summary>
+        /// Lấy khoảng cách hiện tại từ BottomPos đến TopPos (world Y)
+        /// </summary>
+        public float GetCurrentTrailHeight()
+        {
+            if (bottomPos != null && topPos != null)
+            {
+                return Mathf.Abs(topPos.position.y - bottomPos.position.y);
+            }
+            return fallbackHeight;
+        }
+
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = Color.green;
