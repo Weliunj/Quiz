@@ -22,6 +22,67 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-15 12:22] — feat(scale-adaptive-trail): dynamically adapt trail and station positions to MountainBg scale
+- **Tác vụ**:
+  - **Tự động nhận diện thay đổi Scale và vị trí mốc (`MountainStationManager.cs`)**:
+    - Khi bạn thay đổi `localScale` của `MountainBg` hoặc dời mốc `TopPos` / `BottomPos`, hệ thống tự động phát hiện độ lệch khoảng cách và tính toán sinh lại con đường mới tương ứng, không còn bị giữ tọa độ cũ bị bẹp.
+  - **Nhân hệ số Scale vào bề ngang (`MountainTrailGenerator.cs`)**:
+    - Bề ngang chân núi `effectiveBaseSpreadX = baseSpreadX * scaleFactorX` và chóp đỉnh `effectiveSummitSpreadX = summitSpreadX * scaleFactorX` tự động tỉ lệ thuận theo độ phóng to của `MountainBg`.
+  - **Gizmos trực quan theo thời gian thực**:
+    - Cập nhật Gizmos trong Scene view tự co giãn chính xác theo scale thực tế của `MountainBg`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainTrailGenerator.cs` (lines 115-130, 350-365 modified)
+  - `Assets/Scripts/MountainStationManager.cs` (lines 212-225 modified)
+- **Ảnh hưởng**:
+  - Khi scale ngọn núi cao lên (để chứa 30 trạm thoáng đãng), toàn bộ đường mòn và các trạm sẽ tự động giãn đều theo chiều cao mới.
+
+### [2026-10-15 12:05] — feat(cone-tapering): cone-shaped X spread calculation to keep stations strictly inside mountain slope
+- **Tác vụ**:
+  - **Cơ chế thu hẹp sườn núi hình chóp nón (`Tapered Cone Spread`)**:
+    - Khi leo từ chân núi (`BottomPos`) lên đỉnh núi (`TopPos`), bề ngang cho phép của các trạm tự động thu hẹp dần:
+      $$\text{currentHalfSpreadX} = \text{Lerp}(\text{summitSpreadX}, \text{baseSpreadX}, (1 - \text{progress})^{\text{slopePower}})$$
+    - Đảm bảo ở chân núi các trạm có thể dạt rộng tự nhiên, nhưng càng lên cao gần chóp đỉnh, trạm sẽ tự động co sát vào trục tâm, loại bỏ hoàn toàn hiện tượng trạm rớt ra ngoài khoảng không bầu trời.
+  - **Trọng tâm trục X nội suy theo đường thẳng**:
+    - `currentCenterX` trượt theo đường nối từ `startPos.x` đến `endPos.x` (ngay cả khi đỉnh núi nằm lệch tâm).
+  - **Trực quan hóa Gizmos trong Scene view**:
+    - Vẽ 2 đường biên sườn núi màu xanh cyan để bạn căn chỉnh trực tiếp kích thước trong Editor.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainTrailGenerator.cs` (lines 25-35, 120-145, 335-365 modified)
+- **Ảnh hưởng**:
+  - Mọi trạm được sinh ra đều nằm gọn gàng 100% bên trong bề mặt núi tuyết.
+
+### [2026-10-15 11:58] — refactor(mountain-manager): modularize mountain system into separate focused components and support Start/End points in MountainBg
+- **Tác vụ**:
+  - **Tách `MountainStationManager` thành 4 component con chuyên biệt**:
+    1. **`MountainBackground.cs`**:
+       - Quản lý `mountainSprite` (SpriteRenderer) nạp ảnh nền núi theo `ThemeSO.mapBg`.
+       - Quản lý 2 điểm mốc `BottomPos` (Start) và `TopPos` (End) nằm trong `MountainBg`.
+       - Tự động nhận diện cấu trúc Hierarchy: `GameManager -> MountainBg -> TopPos / BottomPos` (hoặc `GameObject / GameObject (1)`).
+       - Cung cấp hàm `GetStartAndEndPositions` và `GetMountainBounds` để tính toán giới hạn không gian núi.
+    2. **`MountainTrailGenerator.cs`**:
+       - Quản lý sinh các GameObject mốc trạm (`StationWorldItem`) và vẽ đường mòn uốn lượn Catmull-Rom (`LineRenderer`).
+       - Sinh trạm trải đều chính xác từ điểm Start (`BottomPos`) lên đỉnh End (`TopPos`).
+    3. **`MountainCameraController.cs`**:
+       - Đảm nhận toàn bộ chuỗi điện ảnh Intro: Lướt chân núi lên đỉnh núi (Ease In-Out) -> Zoom toàn cảnh (Fast Snap 70% + Decelerate 30%) -> Bay về Player.
+       - Điều khiển Camera bám sát Player và kéo Pan / lăn chuột Zoom tự do.
+    4. **`MountainPlayerController.cs`**:
+       - Đảm nhận visual nhân vật (badge cam viền vàng, bóng đổ), hiệu ứng nhún Idle và di chuyển nhảy bước nhịp nhàng giữa 2 trạm.
+  - **Tái cấu trúc `MountainStationManager.cs` thành Facade Coordinator**:
+    - Gắn trực tiếp lên `GameManager` (hoặc GameObject bất kỳ).
+    - Tự động phát hiện và kết nối với `MountainBg`, `MountainCameraController`, `MountainTrailGenerator`, `MountainPlayerController`.
+  - **Cập nhật `MapManager.cs`**:
+    - Tự động tìm `MountainStationManager` trên `GameManager` hoặc scene nếu chưa gán trong Inspector.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainBackground.cs` (New file)
+  - `Assets/Scripts/MountainCameraController.cs` (New file)
+  - `Assets/Scripts/MountainPlayerController.cs` (New file)
+  - `Assets/Scripts/MountainTrailGenerator.cs` (New file)
+  - `Assets/Scripts/MountainStationManager.cs` (Refactored from 1327 lines to 380 clean lines)
+  - `Assets/Scripts/MapManager.cs` (lines 160-170 modified)
+- **Ảnh hưởng**:
+  - Code modular, sạch sẽ, dễ bảo trì và mở rộng.
+  - Vị trí trạm xuất phát và đỉnh núi giờ đây neo chính xác vào 2 điểm `BottomPos` và `TopPos` do bạn thiết lập trực quan trong `MountainBg`.
+
 ### [2026-10-15 11:08] — feat(theme-bg): add mapBg sprite to ThemeSO and bind to MapImg in map list & mountainSprite in gameplay
 - **Tác vụ**:
   - **Thêm trường Sprite `mapBg` vào `ThemeSO.cs`**:

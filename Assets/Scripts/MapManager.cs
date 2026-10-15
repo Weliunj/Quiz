@@ -161,6 +161,13 @@ namespace QuizGame
                     if (stationQuiz == null) stationQuiz = gamePanel.AddComponent<StationQuizController>();
                 }
             }
+
+            if (mountainManager == null)
+            {
+                mountainManager = GetComponent<MountainStationManager>();
+                if (mountainManager == null) mountainManager = GetComponentInChildren<MountainStationManager>(true);
+                if (mountainManager == null) mountainManager = FindFirstObjectByType<MountainStationManager>();
+            }
         }
 
         private Transform FindChild(Transform parent, params string[] names)
