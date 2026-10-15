@@ -14,6 +14,9 @@ namespace QuizGame
         [Tooltip("Nút mở bảng tạo và chỉnh sửa câu hỏi cho map")]
         [SerializeField] private Button editBtn;
 
+        [Tooltip("Nút xóa bản đồ")]
+        [SerializeField] private Button deleteBtn;
+
         [Header("--- CHỮ HIỂN THỊ (TEXTS) ---")]
         [Tooltip("Text hiển thị tên bản đồ")]
         [SerializeField] private TMP_Text titleText;
@@ -24,6 +27,7 @@ namespace QuizGame
         public MapData Data { get; private set; }
         private Action<MapData> onEditAction;
         private Action<MapData> onPlayAction;
+        private Action<MapData> onDeleteAction;
 
         private void Awake()
         {
@@ -31,6 +35,7 @@ namespace QuizGame
 
             if (playBtn != null) playBtn.onClick.AddListener(() => onPlayAction?.Invoke(Data));
             if (editBtn != null) editBtn.onClick.AddListener(() => onEditAction?.Invoke(Data));
+            if (deleteBtn != null) deleteBtn.onClick.AddListener(() => onDeleteAction?.Invoke(Data));
         }
 
         private void AutoFindReferences()
@@ -45,6 +50,12 @@ namespace QuizGame
             {
                 Transform t = FindChild(transform, "EditBtn", "EditButton", "Edit");
                 if (t != null) editBtn = t.GetComponent<Button>();
+            }
+
+            if (deleteBtn == null)
+            {
+                Transform t = FindChild(transform, "DeleteBtn", "DeleteButton", "Delete", "DelBtn", "RemoveBtn");
+                if (t != null) deleteBtn = t.GetComponent<Button>();
             }
 
             if (titleText == null)
@@ -70,11 +81,32 @@ namespace QuizGame
             return null;
         }
 
-        public void Setup(MapData data, Action<MapData> onEdit, Action<MapData> onPlay)
+        public void Setup(MapData data, Action<MapData> onEdit, Action<MapData> onPlay, Action<MapData> onDelete = null)
         {
             Data = data;
             onEditAction = onEdit;
             onPlayAction = onPlay;
+            onDeleteAction = onDelete;
+
+            AutoFindReferences();
+
+            if (playBtn != null)
+            {
+                playBtn.onClick.RemoveAllListeners();
+                playBtn.onClick.AddListener(() => onPlayAction?.Invoke(Data));
+            }
+
+            if (editBtn != null)
+            {
+                editBtn.onClick.RemoveAllListeners();
+                editBtn.onClick.AddListener(() => onEditAction?.Invoke(Data));
+            }
+
+            if (deleteBtn != null)
+            {
+                deleteBtn.onClick.RemoveAllListeners();
+                deleteBtn.onClick.AddListener(() => onDeleteAction?.Invoke(Data));
+            }
 
             if (titleText != null)
             {

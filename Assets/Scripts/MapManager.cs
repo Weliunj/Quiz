@@ -22,6 +22,9 @@ namespace QuizGame
         [Tooltip("Hệ thống sinh trạm leo núi khi bấm Play")]
         [SerializeField] private MountainStationManager mountainManager;
 
+        [Tooltip("Hệ thống quản lý câu hỏi và các trạm dừng (StationPanel & QuestPanel)")]
+        [SerializeField] private StationQuizController stationQuiz;
+
         [Header("--- NÚT BẤM (BUTTONS) ---")]
         [Tooltip("Nút Start ở màn hình chính để vào chọn map")]
         [SerializeField] private Button startBtn;
@@ -150,6 +153,12 @@ namespace QuizGame
                 {
                     Transform t = FindChild(gamePanel.transform, "ClimbBtn", "ClimbButton", "Climb");
                     if (t != null) climbBtn = t.GetComponent<Button>();
+                }
+
+                if (stationQuiz == null)
+                {
+                    stationQuiz = gamePanel.GetComponentInChildren<StationQuizController>(true);
+                    if (stationQuiz == null) stationQuiz = gamePanel.AddComponent<StationQuizController>();
                 }
             }
         }
@@ -320,10 +329,29 @@ namespace QuizGame
                 onPlay: (data) =>
                 {
                     StartGameOnMap(data);
+                },
+                onDelete: (data) =>
+                {
+                    DeleteMap(data);
                 }
             );
 
             return mapObj;
+        }
+
+        public void DeleteMap(MapData mapData)
+        {
+            if (mapData == null || saveData == null || saveData.maps == null) return;
+
+            if (saveData.maps.Contains(mapData))
+            {
+                saveData.maps.Remove(mapData);
+                QuizSaveSystem.Save(saveData);
+                Debug.Log($"[MapManager] Đã xóa bản đồ: '{mapData.mapName}' và lưu dữ liệu thành công!");
+
+                RefreshMapListUI();
+                StartCoroutine(InitSnapRoutine());
+            }
         }
 
         public void StartGameOnMap(MapData mapData)
@@ -347,6 +375,14 @@ namespace QuizGame
                 }
             }
 
+            if (stationQuiz != null)
+            {
+                stationQuiz.InitForMap(mapData);
+            }
+
+            mountainManager.OnStationReached -= HandleStationReached;
+            mountainManager.OnStationReached += HandleStationReached;
+
             mountainManager.OpenMountain(mapData, onBack: () =>
             {
                 OnPauseButtonClicked();
@@ -358,8 +394,26 @@ namespace QuizGame
             Debug.Log($"[MapManager] Bắt đầu chơi: {mapData.mapName} (Số trạm: {mapData.stationCount})");
         }
 
+        private void HandleStationReached(int stationIndex)
+        {
+            if (stationQuiz != null)
+            {
+                stationQuiz.ShowJoinPrompt(stationIndex);
+            }
+        }
+
         public void OnPauseButtonClicked()
         {
+            if (stationQuiz != null)
+            {
+                stationQuiz.HideAllStationPanels();
+            }
+
+            if (mountainManager != null)
+            {
+                mountainManager.OnStationReached -= HandleStationReached;
+            }
+
             if (gamePanel != null) gamePanel.SetActive(false);
             if (mountainManager != null) mountainManager.CloseMountain(triggerCallback: false);
 

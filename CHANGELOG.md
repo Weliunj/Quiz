@@ -22,6 +22,46 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-15 09:41] — feat(quiz-gameplay): integrate station question system (StationPanel & QuestPanel) with timer, skip, and answer feedback
+- **Tác vụ**:
+  - **Tạo mới component `StationQuizController.cs`**:
+    - **Tương tác vào trạm (Join Station)**:
+      - Khi nhân vật leo tới trạm dừng (`OnStationReached`), tự động hiện nút `JoinBtn`.
+      - Bấm `JoinBtn` mở `StationPanel`, hiển thị các item câu hỏi trong `ItemContainer`.
+      - Hỗ trợ nút `ExitBtn` để rời khỏi trạm và quay lại góc nhìn ngọn núi leo tiếp.
+    - **Tích hợp câu hỏi từ dữ liệu bản đồ (`MapData.questions`)**:
+      - Bấm vào một item trong `ItemContainer` sẽ mở `QuestPanel` và gọi ngẫu nhiên câu hỏi từ danh sách map nhập vào.
+      - **Cơ chế chống trùng lặp**: Lấy câu hỏi từ pool chưa dùng (`unusedQuestions`); chỉ khi trả lời hết toàn bộ danh sách mới tự động reset lại để tránh lặp.
+      - **Xáo trộn đáp án ngẫu nhiên**: 4 phương án trên các nút `D1Btn`, `D1Btn (1)`, `D1Btn (2)`, `D1Btn (3)` được hoán vị ngẫu nhiên.
+    - **Cơ chế chọn đáp án & đổi đáp án tự do**:
+      - Người chơi được tự do bấm chọn hoặc đổi sang đáp án khác trước khi hết giờ (nút được chọn đổi màu highlight nhẹ, chưa hiển thị đúng/sai).
+    - **Đếm ngược thời gian & Nút SkipTimeBtn**:
+      - Hiển thị đếm lùi từng giây trên `TimeText`.
+      - Bấm `SkipTimeBtn` lập tức rút ngắn thời gian còn **3 giây** (`3s ➔ 2s ➔ 1s ➔ 0s`).
+    - **Phản hồi kết quả trực quan & Trì hoãn đóng 1s**:
+      - Khi đồng hồ về 0s, hệ thống khóa đáp án và hiển thị màu kết quả:
+        - **Chọn Đúng**: Nút đã chọn tô màu Xanh lá.
+        - **Chọn Sai**: Nút đã chọn tô màu Đỏ, nút đáp án đúng tô màu Xanh lá.
+        - **Không chọn gì**: Đáp án đúng tô màu Đỏ.
+      - Dừng lại đúng 1 giây (`WaitForSeconds(1.0f)`) cho người chơi xem kết quả trước khi đóng `QuestPanel`.
+      - Nếu **ĐÚNG**: Nút item đó biến mất (`SetActive(false)`), cập nhật giảm `RemainText`.
+      - Nếu **SAI hoặc HẾT GIỜ**: Nút item bị làm mờ (`opacity = 0.45` qua `CanvasGroup`) và khóa tương tác (`interactable = false`).
+  - **Cập nhật `MapManager.cs`**:
+    - Tự động liên kết `StationQuizController` khi bắt đầu chơi map (`StartGameOnMap`).
+    - Lắng nghe sự kiện `mountainManager.OnStationReached` để hiển thị prompt Join trạm.
+    - Dọn dẹp sạch trạng thái trạm khi bấm Pause về menu (`OnPauseButtonClicked`).
+  - **Hỗ trợ xóa bản đồ (`DeleteMap`)**:
+    - Thêm `DeleteBtn` vào `MapItemUI.cs` và hàm `DeleteMap` trong `MapManager.cs` để xóa map và lưu lại save json.
+  - **Tối ưu Camera Intro (`MountainStationManager.cs`)**:
+    - Chuyển hướng camera lướt theo 1 đường thẳng trực tiếp từ chân núi lên đỉnh núi với nội suy mượt mà `Smootherstep` (chậm êm dịu lúc bắt đầu và hãm phanh chậm dần lúc chạm đỉnh).
+    - Phóng to chiếu toàn cảnh chậm rãi để chiêm ngưỡng, sau đó lướt nhanh về lại Player và khóa bám theo nhân vật.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (Tạo mới)
+  - `Assets/Scripts/MapManager.cs` (lines 20-30, 150-165, 330-360, 375-430 modified)
+  - `Assets/Scripts/MapItemUI.cs` (lines 14-40, 80-110 modified)
+  - `Assets/Scripts/MountainStationManager.cs` (lines 155-165, 815-985, 1170-1185 modified)
+- **Ảnh hưởng**: Hoàn tất chu trình Gameplay leo núi: từ di chuyển giữa các trạm, mở trạm làm bài thi, đếm giờ, skip thời gian, kiểm tra đúng/sai trực quan cho tới lưu trữ trạng thái bản đồ.
+
 ### [2026-10-13 11:28] — feat(station-generator): independent fixed layer spacing (layerSpacingY) and free horizontal random spread (horizontalSpreadX)
 - **Tác vụ**:
   - Cập nhật [MountainStationManager.cs](file:///c:/Users/Hi/Documents/Unity%20Project/Quiz/Assets/Scripts/MountainStationManager.cs):

@@ -34,6 +34,9 @@ namespace QuizGame
         [Tooltip("Bề ngang tối đa để rải ngẫu nhiên tọa độ X cho các trạm (độc lập với background núi)")]
         [SerializeField] private float horizontalSpreadX = 8.0f;
 
+        [Tooltip("Luôn tạo mới ngẫu nhiên vị trí trạm mỗi lần bấm Play thay vì load lại vị trí cũ")]
+        [SerializeField] private bool alwaysRandomOnPlay = true;
+
         [Tooltip("Tỷ lệ lề an toàn 2 bên sườn núi (0.7 = 70% bề ngang núi để trạm không rớt ra ngoài)")]
         [Range(0.2f, 0.98f)]
         [SerializeField] private float widthMarginFactor = 0.88f;
@@ -155,6 +158,10 @@ namespace QuizGame
         private GameObject currentPlayerObj;
         private int currentStationIndex = 0;
         private bool isPlayerMoving = false;
+
+        public int CurrentStationIndex => currentStationIndex;
+        public bool IsPlayerMoving => isPlayerMoving;
+        public event Action<int> OnStationReached;
 
         private Vector3[] cachedPathPoints;
         private Coroutine introCoroutine;
@@ -396,20 +403,20 @@ namespace QuizGame
             int count = Mathf.Max(2, currentMap.stationCount);
 
             // Kiểm tra xem đã có dữ liệu tọa độ World Transform lưu sẵn hay chưa
-            bool hasValidSavedPositions = (currentMap.stationPositions != null && currentMap.stationPositions.Count == count);
+            bool hasValidSavedPositions = (!alwaysRandomOnPlay && currentMap.stationPositions != null && currentMap.stationPositions.Count == count);
 
             if (!hasValidSavedPositions)
             {
-                // Chưa có -> Sinh ngẫu nhiên và LƯU lại
+                // Tự động sinh ngẫu nhiên các trạm
                 GenerateAndSaveRandomPath(count);
             }
 
-            // Tạo các GameObject trạm tại vị trí World Transform đã lưu
+            // Tạo các GameObject trạm tại vị trí World Transform đã tính toán
             SpawnStationsFromSavedData();
         }
 
         /// <summary>
-        /// Sinh ngẫu nhiên con đường mòn uốn lượn từ chân núi lên đỉnh núi và lưu vào MapData
+        /// Sinh ngẫu nhiên con đường mòn uốn lượn từ chân núi lên đỉnh núi với các trạm dạt xa trái, phải, trung tâm
         /// </summary>
         public void GenerateAndSaveRandomPath(int count)
         {
@@ -429,55 +436,20 @@ namespace QuizGame
             }
             else
             {
-                // 1. Khoảng cách cố định giữa 2 tầng: Mỗi tầng cách tầng trước đúng layerSpacingY
+                // 1. Khoảng cách cố định giữa 2 tầng: Mỗi tầng cách tầng trước đúng layerSpacingY (không ngẫu nhiên Y)
                 float effectiveStepY = Mathf.Max(0.5f, layerSpacingY);
 
-                // 2. Độ dạt ngang X: Dùng horizontalSpreadX độc lập với background núi
-                // (Nếu horizontalSpreadX được chỉnh thì lấy 1 nửa làm bán kính lệch, hoặc fallback theo halfWidth)
+                // 2. Biên độ trục X: Dùng horizontalSpreadX độc lập với background núi
                 float halfSpreadX = (horizontalSpreadX > 0f) ? (horizontalSpreadX * 0.5f) : (halfWidth * widthMarginFactor);
-
-                float previousX = centerX;
 
                 for (int i = 0; i < count; i++)
                 {
-                    bool isSummit = (i == count - 1);
-                    bool isBase = (i == 0);
+                    // 1. Tọa độ Y: Cố định theo khoảng cách tầng layerSpacingY
+                    float y = minY + (i * effectiveStepY);
 
-                    // 1. Tọa độ Y: Tăng dần đều đúng 1 khoảng cố định layerSpacingY giữa mỗi tầng
-                    // (Thêm một chút jitter nhỏ ngẫu nhiên để các trạm không bị thẳng hàng tăm tắp cứng nhắc)
-                    float jitterY = (!isBase && !isSummit) ? UnityEngine.Random.Range(-effectiveStepY * 0.08f, effectiveStepY * 0.08f) : 0f;
-                    float y = minY + (i * effectiveStepY) + jitterY;
-
-                    // 2. Tọa độ X: Rải Random tự do trong khoảng [-halfSpreadX, +halfSpreadX]
-                    // Tránh việc cố tình nhảy nhị phân trái-phải-trái-phải. Trạm có thể nằm ở giữa, lệch nhẹ trái, lệch nhẹ phải hoặc tít mép.
-                    float x = centerX;
-                    if (isSummit)
-                    {
-                        // Đỉnh núi: Nằm tập trung ở gần giữa tâm
-                        x = centerX + UnityEngine.Random.Range(-halfSpreadX * 0.25f, halfSpreadX * 0.25f);
-                    }
-                    else if (isBase)
-                    {
-                        // Trạm xuất phát chân núi: Nằm ngẫu nhiên gần chân núi
-                        x = centerX + UnityEngine.Random.Range(-halfSpreadX * 0.5f, halfSpreadX * 0.5f);
-                        previousX = x;
-                    }
-                    else
-                    {
-                        // Các trạm ở giữa: Random X tự do hoàn toàn trong khoảng [-halfSpreadX, halfSpreadX]
-                        // Đảm bảo không quá sát sạt trạm liền trước về trục X để đường nối không bị thẳng đuột hoặc đè lên nhau
-                        float candidateX = centerX + UnityEngine.Random.Range(-halfSpreadX, halfSpreadX);
-
-                        // Thử lấy vị trí có độ lệch vừa đủ so với trạm trước (ít nhất 10% spread) để tạo độ ngoằn ngoèo tự nhiên
-                        if (Mathf.Abs(candidateX - previousX) < halfSpreadX * 0.25f)
-                        {
-                            float nudgeDir = (candidateX >= centerX) ? -1f : 1f;
-                            candidateX += nudgeDir * (halfSpreadX * 0.35f);
-                        }
-
-                        x = Mathf.Clamp(candidateX, centerX - halfSpreadX, centerX + halfSpreadX);
-                        previousX = x;
-                    }
+                    // 2. Tọa độ X: Hoàn toàn ngẫu nhiên tự do trong bề ngang X [-halfSpreadX, +halfSpreadX]
+                    // Không tuân theo bất kỳ luật làn đường hay ràng buộc nào
+                    float x = centerX + UnityEngine.Random.Range(-halfSpreadX, halfSpreadX);
 
                     currentMap.stationPositions.Add(new StationPos(x, y));
                 }
@@ -501,7 +473,7 @@ namespace QuizGame
                 }
                 QuizSaveSystem.Save(currentSave);
             }
-            Debug.Log($"[MountainStationManager] Đã random và lưu đúng {count} trạm ở dạng World Transform cho map '{currentMap.mapName}'!");
+            Debug.Log($"[MountainStationManager] Đã random tự do và lưu {count} trạm cho map '{currentMap.mapName}'!");
         }
 
         /// <summary>
@@ -815,12 +787,8 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Hiệu ứng máy quay điện ảnh khi vừa mở màn chơi:
-        /// 1. Xuất phát tại chân núi (focus Player, góc nhìn cận cảnh thu nhỏ cam).
-        /// 2. Lướt dọc theo đường mòn ngoằn ngoèo lên tới đỉnh núi.
-        /// 3. Zoom toàn cảnh ngọn núi (panoramic overview) và dừng 1 nhịp để chiêm ngưỡng.
-        /// 4. Lao nhanh trở về lại vị trí Player + thu nhỏ cam (camPlayerSize).
-        /// 5. Bật chế độ camera luôn follow player.
+        /// Hiệu ứng máy quay khi vừa mở màn chơi:
+        /// Di chuyển mượt mà từ chân núi lên đỉnh núi (lerp chậm dần lúc start và lúc end - Ease In Out)
         /// </summary>
         private IEnumerator PlayMountainIntroSequence()
         {
@@ -838,96 +806,98 @@ namespace QuizGame
                 ? currentPlayerObj.transform.position
                 : new Vector3(currentMap.stationPositions[0].x, currentMap.stationPositions[0].y, 0f);
 
-            GetMountainBounds(out float minY, out float maxY, out float centerX, out float halfWidth);
-
-            // GIAI ĐOẠN 1: Focus vào Player tại chân núi (thu nhỏ cam)
+            // Đặt Camera tại chân núi tập trung vào Player lúc bắt đầu
             worldCamera.transform.position = new Vector3(playerPos.x, playerPos.y + playerCameraOffsetY, camZ);
             if (worldCamera.orthographic)
             {
                 worldCamera.orthographicSize = camPlayerSize;
             }
 
+            // Dừng nhẹ 1 nhịp ở chân núi trước khi lướt
             yield return new WaitForSeconds(baseStationDelay);
 
-            // GIAI ĐOẠN 2: Soi đường mòn lên đỉnh núi (Từ chậm chuyển sang nhanh dần)
-            float panDuration = Mathf.Max(2.5f, cameraPanToSummitDuration);
+            // DI CHUYỂN 1 LINE THẲNG TỪ ĐẦU CHÂN NÚI THẲNG TỚI ĐỈNH NÚI:
+            // Sử dụng đường cong Smootherstep để:
+            // - Xuất phát cực kỳ êm ái, tăng tốc chậm (Soft Start - Ease In)
+            // - Gần tới đỉnh núi hãm phanh chậm dần đều (Soft End - Ease Out)
+            float panDuration = Mathf.Max(2.0f, cameraPanToSummitDuration);
             float elapsed = 0f;
 
-            if (cachedPathPoints != null && cachedPathPoints.Length > 1)
+            Vector3 summitPos = new Vector3(
+                currentMap.stationPositions[currentMap.stationPositions.Count - 1].x,
+                currentMap.stationPositions[currentMap.stationPositions.Count - 1].y,
+                0f
+            );
+
+            Vector3 startCamPos = worldCamera.transform.position;
+            Vector3 endCamPos = new Vector3(summitPos.x, summitPos.y + playerCameraOffsetY, camZ);
+
+            while (elapsed < panDuration)
             {
-                while (elapsed < panDuration)
-                {
-                    if (!isIntroPlaying) yield break;
+                if (!isIntroPlaying) yield break;
 
-                    elapsed += Time.deltaTime;
-                    float normalizedTime = Mathf.Clamp01(elapsed / panDuration);
+                elapsed += Time.deltaTime;
+                float normalizedTime = Mathf.Clamp01(elapsed / panDuration);
 
-                    // Easing Ease-In (từ chậm rồi nhanh dần lên đỉnh): t = normalizedTime^2.2f
-                    float t = Mathf.Pow(normalizedTime, 2.2f);
+                // Smootherstep (6x^5 - 15x^4 + 10x^3): Chậm êm ái ở start và hãm phanh chậm dần ở end
+                float t = SmoothStepCubic(normalizedTime);
 
-                    float exactIndex = t * (cachedPathPoints.Length - 1);
-                    int idxA = Mathf.FloorToInt(exactIndex);
-                    int idxB = Mathf.Min(idxA + 1, cachedPathPoints.Length - 1);
-                    float frac = exactIndex - idxA;
+                // Di chuyển 1 đường thẳng trực tiếp từ chân núi tới đỉnh núi
+                worldCamera.transform.position = Vector3.Lerp(startCamPos, endCamPos, t);
 
-                    Vector3 pathPos = Vector3.Lerp(cachedPathPoints[idxA], cachedPathPoints[idxB], frac);
-                    worldCamera.transform.position = new Vector3(pathPos.x, pathPos.y + playerCameraOffsetY, camZ);
-
-                    yield return null;
-                }
-            }
-            else
-            {
-                // Fallback nếu không có path points
-                Vector3 summitPos = new Vector3(
-                    currentMap.stationPositions[currentMap.stationPositions.Count - 1].x,
-                    currentMap.stationPositions[currentMap.stationPositions.Count - 1].y,
-                    0f
-                );
-                Vector3 startCam = worldCamera.transform.position;
-                Vector3 endCam = new Vector3(summitPos.x, summitPos.y + playerCameraOffsetY, camZ);
-
-                while (elapsed < panDuration)
-                {
-                    if (!isIntroPlaying) yield break;
-                    elapsed += Time.deltaTime;
-                    float normalizedTime = Mathf.Clamp01(elapsed / panDuration);
-
-                    // Easing Ease-In (chậm ở đầu, nhanh dần về sau)
-                    float t = Mathf.Pow(normalizedTime, 2.2f);
-                    worldCamera.transform.position = Vector3.Lerp(startCam, endCam, t);
-                    yield return null;
-                }
+                yield return null;
             }
 
-            // Dừng chờ tại đỉnh núi 1 khoảng thời gian trước khi phóng to toàn cảnh
+            // Dừng lại ở đỉnh núi 1 nhịp ngắm cảnh
             yield return new WaitForSeconds(summitArrivalDelay);
 
-            // GIAI ĐOẠN 3: Zoom toàn cảnh ngọn núi (Panoramic Overview) - Tốc độ nhanh hơn
-            float zoomOutDuration = Mathf.Max(0.2f, zoomOverviewSpeed);
+            // GIAI ĐOẠN 2: CHIẾU FULL MAP (CHẬM VÀ MƯỢT MÀ ĐỂ NGẮM TOÀN BỘ NGỌN NÚI)
+            float zoomOutDuration = Mathf.Max(1.2f, zoomOverviewSpeed); // Chiếu full chậm rãi
             float zoomOutElapsed = 0f;
             Vector3 summitCamPos = worldCamera.transform.position;
 
-            // Tính bao quát thực tế theo danh sách trạm đã tạo để không phụ thuộc vào sprite núi
+            GetMountainBounds(out float minY, out float maxY, out float centerX, out float halfWidth);
+
             float actualMinY = minY;
             float actualMaxY = maxY;
+            float minStationX = centerX;
+            float maxStationX = centerX;
+
             if (currentMap.stationPositions != null && currentMap.stationPositions.Count > 0)
             {
                 actualMinY = currentMap.stationPositions[0].y;
                 actualMaxY = currentMap.stationPositions[currentMap.stationPositions.Count - 1].y;
+
+                minStationX = currentMap.stationPositions[0].x;
+                maxStationX = currentMap.stationPositions[0].x;
+                for (int s = 1; s < currentMap.stationPositions.Count; s++)
+                {
+                    float sx = currentMap.stationPositions[s].x;
+                    if (sx < minStationX) minStationX = sx;
+                    if (sx > maxStationX) maxStationX = sx;
+                }
             }
+
             float actualCenterY = (actualMinY + actualMaxY) * 0.5f;
             float actualHeight = Mathf.Max(maxY - minY, actualMaxY - actualMinY);
+            float currentSpreadX = (horizontalSpreadX > 0f) ? horizontalSpreadX : (halfWidth * 2f);
+            float actualSpreadX = Mathf.Max(currentSpreadX, (maxStationX - minStationX) + 4f);
 
             Vector3 overviewCamPos = new Vector3(centerX, actualCenterY, camZ);
             float startSize = worldCamera.orthographic ? worldCamera.orthographicSize : camPlayerSize;
-            float targetOverviewSize = Mathf.Max(camOverviewSize, actualHeight * 0.58f);
+
+            // Camera size bao trùm cả chiều cao và chiều ngang
+            float camAspect = (worldCamera != null && worldCamera.aspect > 0.05f) ? worldCamera.aspect : (9f / 16f);
+            float sizeRequiredByX = (actualSpreadX * 0.5f) / camAspect;
+            float sizeRequiredByY = actualHeight * 0.58f;
+            float targetOverviewSize = Mathf.Max(camOverviewSize, Mathf.Max(sizeRequiredByX, sizeRequiredByY));
 
             while (zoomOutElapsed < zoomOutDuration)
             {
                 if (!isIntroPlaying) yield break;
                 zoomOutElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, zoomOutElapsed / zoomOutDuration);
+                float normalizedTime = Mathf.Clamp01(zoomOutElapsed / zoomOutDuration);
+                float t = SmoothStepCubic(normalizedTime);
 
                 worldCamera.transform.position = Vector3.Lerp(summitCamPos, overviewCamPos, t);
                 if (worldCamera.orthographic)
@@ -937,11 +907,11 @@ namespace QuizGame
                 yield return null;
             }
 
-            // Dừng 1 nhịp ngắn để chiêm ngưỡng toàn cảnh
+            // Dừng ngắm toàn cảnh ngọn núi
             yield return new WaitForSeconds(overviewHoldDuration);
 
-            // GIAI ĐOẠN 4: Bay nhanh trở về lại Player + thu nhỏ cam
-            float returnDuration = Mathf.Max(0.2f, returnToPlayerSpeed);
+            // GIAI ĐOẠN 3: QUAY VỀ LẠI PLAYER (NHANH HƠN NHƯNG VẪN HÃM PHANH MƯỢT MÀ KHI TỚI ĐÍCH)
+            float returnDuration = Mathf.Max(0.5f, returnToPlayerSpeed); // Quay về nhanh
             float returnElapsed = 0f;
             Vector3 returnStartPos = worldCamera.transform.position;
             float returnStartSize = worldCamera.orthographic ? worldCamera.orthographicSize : targetOverviewSize;
@@ -950,7 +920,8 @@ namespace QuizGame
             {
                 if (!isIntroPlaying) yield break;
                 returnElapsed += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, returnElapsed / returnDuration);
+                float normalizedTime = Mathf.Clamp01(returnElapsed / returnDuration);
+                float t = SmoothStepCubic(normalizedTime);
 
                 Vector3 currentTargetPlayerPos = (currentPlayerObj != null)
                     ? currentPlayerObj.transform.position
@@ -965,7 +936,19 @@ namespace QuizGame
                 yield return null;
             }
 
+            // Kết thúc Intro và kích hoạt Camera điều khiển / theo dõi người chơi
             FinishIntroSequence();
+        }
+
+        /// <summary>
+        /// Hàm nội suy đường cong mượt mà (SmootherStep / Cubic Ease):
+        /// Khởi hành êm, lướt đều và hãm phanh chậm dần ở cuối chặng
+        /// </summary>
+        private float SmoothStepCubic(float x)
+        {
+            x = Mathf.Clamp01(x);
+            // Ken Perlin's Smootherstep: 6x^5 - 15x^4 + 10x^3 (độ mượt cao, hãm phanh cực êm cả đầu và cuối)
+            return x * x * x * (x * (x * 6f - 15f) + 10f);
         }
 
         public void SkipIntroSequence()
@@ -998,6 +981,8 @@ namespace QuizGame
                     worldCamera.orthographicSize = camPlayerSize;
                 }
             }
+
+            OnStationReached?.Invoke(currentStationIndex);
         }
 
         /// <summary>
@@ -1194,6 +1179,7 @@ namespace QuizGame
             isPlayerMoving = false;
 
             Debug.Log($"[MountainStationManager] Người chơi đã leo tới trạm {toIndex + 1} / {currentMap.stationPositions.Count}!");
+            OnStationReached?.Invoke(toIndex);
             onComplete?.Invoke();
         }
 
