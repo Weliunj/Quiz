@@ -87,7 +87,8 @@ namespace QuizGame
             Action onNearComplete = null, 
             float customNearThreshold = -1f,
             Action onDepart = null,
-            float customDepartThreshold = -1f)
+            float customDepartThreshold = -1f,
+            Action<Action> onMidwayEvent = null)
         {
             if (isPlayerMoving) return;
             float finalDepartThresh = (customDepartThreshold >= 0f) ? customDepartThreshold : departThreshold;
@@ -95,7 +96,7 @@ namespace QuizGame
 
             StartCoroutine(MovePlayerAlongTrailRoutine(
                 fromIndex, toIndex, cachedPathPoints, targetStationPos, curveResolution, 
-                onComplete, onNearComplete, finalNearThresh, onDepart, finalDepartThresh));
+                onComplete, onNearComplete, finalNearThresh, onDepart, finalDepartThresh, onMidwayEvent));
         }
 
         private IEnumerator MovePlayerAlongTrailRoutine(
@@ -108,10 +109,12 @@ namespace QuizGame
             Action onNearComplete, 
             float targetNearThreshold,
             Action onDepart,
-            float targetDepartThreshold)
+            float targetDepartThreshold,
+            Action<Action> onMidwayEvent = null)
         {
             isPlayerMoving = true;
             bool departFired = false;
+            bool midwayFired = false;
             bool nearFired = false;
 
             int segPoints = Mathf.Max(2, curveResolution);
@@ -138,7 +141,44 @@ namespace QuizGame
                     onDepart?.Invoke();
                 }
 
-                // 2. Kích hoạt onNearComplete khi gần đến trạm kế tiếp
+                // 2. Kích hoạt sự kiện giữa chặng (Thiên tai) nếu có
+                if (!midwayFired && onMidwayEvent != null && t >= 0.5f)
+                {
+                    midwayFired = true;
+
+                    // Đưa nhân vật đứng chính xác ở mốc giữa 2 trạm
+                    Vector3 midTrailPos;
+                    if (canUsePathPoints)
+                    {
+                        float midIdxFloat = Mathf.Lerp(startIdx, endIdx, 0.5f);
+                        int mA = Mathf.FloorToInt(midIdxFloat);
+                        int mB = Mathf.Min(mA + 1, endIdx);
+                        float mFrac = midIdxFloat - mA;
+                        midTrailPos = Vector3.Lerp(cachedPathPoints[mA], cachedPathPoints[mB], mFrac);
+                    }
+                    else
+                    {
+                        midTrailPos = Vector3.Lerp(startPos, targetFinalPos, 0.5f);
+                    }
+
+                    if (currentPlayerObj != null)
+                    {
+                        currentPlayerObj.transform.position = new Vector3(midTrailPos.x, midTrailPos.y + yOffset, -0.1f);
+                    }
+
+                    bool resumeClimb = false;
+                    onMidwayEvent?.Invoke(() => resumeClimb = true);
+
+                    while (!resumeClimb)
+                    {
+                        yield return null;
+                    }
+
+                    // Reset lại mốc elapsed để tiếp tục di chuyển nửa chặng còn lại
+                    elapsed = climbDuration * 0.5f;
+                }
+
+                // 3. Kích hoạt onNearComplete khi gần đến trạm kế tiếp
                 if (!nearFired && t >= targetNearThreshold)
                 {
                     nearFired = true;

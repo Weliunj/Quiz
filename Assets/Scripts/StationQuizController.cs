@@ -427,13 +427,74 @@ namespace QuizGame
         /// <summary>
         /// Thêm số lượng cho item ngẫu nhiên (hoặc item chỉ định) thuộc Theme khi trả lời đúng
         /// </summary>
-        public void RewardThemeItem(int amount = 1)
+        /// <summary>
+        /// Chuẩn hóa chuỗi định danh item để đối chiếu thông minh (bỏ qua 'item_', '_', '-', số cuối, sửa lỗi camfire/campfire)
+        /// </summary>
+        public static string NormalizeKey(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return "";
+            string s = key.Trim().ToLowerInvariant();
+            if (s.StartsWith("item_")) s = s.Substring(5);
+            else if (s.StartsWith("item")) s = s.Substring(4);
+            s = s.Replace("_", "").Replace("-", "").Replace(" ", "");
+            s = s.Replace("camfire", "campfire");
+            while (s.Length > 0 && char.IsDigit(s[s.Length - 1]))
+            {
+                s = s.Substring(0, s.Length - 1);
+            }
+            return s;
+        }
+
+        /// <summary>
+        /// Thêm số lượng cho item chỉ định (hoặc ngẫu nhiên nếu không chỉ định) thuộc Theme khi trả lời đúng
+        /// </summary>
+        public void RewardThemeItem(int amount = 1, string specificItemId = null)
         {
             if (inventoryItems == null || inventoryItems.Count == 0) return;
 
-            // Chọn 1 item id từ theme của map hiện tại
-            List<string> keys = new List<string>(inventoryItems.Keys);
-            string chosenId = keys[UnityEngine.Random.Range(0, keys.Count)];
+            string chosenId = null;
+
+            // 1. Nếu có chỉ định item cụ thể (item mà người chơi vừa bấm vào để trả lời)
+            if (!string.IsNullOrEmpty(specificItemId))
+            {
+                string normTarget = NormalizeKey(specificItemId);
+                foreach (var k in inventoryItems.Keys)
+                {
+                    if (k.Equals(specificItemId, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizeKey(k).Equals(normTarget, StringComparison.OrdinalIgnoreCase))
+                    {
+                        chosenId = k;
+                        break;
+                    }
+                    if (itemDataLookup != null && itemDataLookup.TryGetValue(k, out ItemSO so) && so != null)
+                    {
+                        if (so.name.Equals(specificItemId, StringComparison.OrdinalIgnoreCase) ||
+                            so.itemName.Equals(specificItemId, StringComparison.OrdinalIgnoreCase) ||
+                            so.itemId.Equals(specificItemId, StringComparison.OrdinalIgnoreCase) ||
+                            NormalizeKey(so.name).Equals(normTarget, StringComparison.OrdinalIgnoreCase) ||
+                            NormalizeKey(so.itemName).Equals(normTarget, StringComparison.OrdinalIgnoreCase) ||
+                            NormalizeKey(so.itemId).Equals(normTarget, StringComparison.OrdinalIgnoreCase))
+                        {
+                            chosenId = k;
+                            break;
+                        }
+                    }
+                }
+
+                // Nếu trong kho chưa có khóa này, tạo mới
+                if (string.IsNullOrEmpty(chosenId))
+                {
+                    chosenId = specificItemId;
+                    inventoryItems[chosenId] = 0;
+                }
+            }
+
+            // 2. Nếu không chỉ định, fallback chọn ngẫu nhiên
+            if (string.IsNullOrEmpty(chosenId))
+            {
+                List<string> keys = new List<string>(inventoryItems.Keys);
+                chosenId = keys[UnityEngine.Random.Range(0, keys.Count)];
+            }
 
             inventoryItems[chosenId] += amount;
             int newCount = inventoryItems[chosenId];
@@ -449,7 +510,193 @@ namespace QuizGame
                 textComp.text = $"x{newCount}";
             }
 
-            Debug.Log($"[StationQuizController] Nhận được +{amount} {chosenId}! Tổng hiện có: {newCount}");
+            Debug.Log($"[StationQuizController] 🎁 Nhận được +{amount} '{chosenId}' (Item trả lời đúng)! Tổng hiện có: {newCount}");
+        }
+
+        /// <summary>
+        /// Lấy số lượng item hiện có trong kho đồ (tìm kiếm thông minh theo itemId hoặc tên item)
+        /// </summary>
+        public int GetItemQuantity(string itemId)
+        {
+            if (inventoryItems == null || string.IsNullOrEmpty(itemId)) return 0;
+
+            // 1. Khớp chính xác
+            if (inventoryItems.TryGetValue(itemId, out int count))
+                return count;
+
+            // 2. Khớp không phân biệt hoa thường
+            foreach (var kvp in inventoryItems)
+            {
+                if (kvp.Key.Equals(itemId, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+            }
+
+            // 3. Khớp qua ItemSO (so khớp itemId, itemName, file name)
+            foreach (var kvp in inventoryItems)
+            {
+                if (itemDataLookup != null && itemDataLookup.TryGetValue(kvp.Key, out ItemSO so) && so != null)
+                {
+                    if (so.name.Equals(itemId, StringComparison.OrdinalIgnoreCase) ||
+                        so.itemName.Equals(itemId, StringComparison.OrdinalIgnoreCase) ||
+                        so.itemId.Equals(itemId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return kvp.Value;
+                    }
+                }
+            }
+
+            // 4. Khớp sau khi chuẩn hóa (camfire == campfire == Campfire == item_camfire1)
+            string normQuery = NormalizeKey(itemId);
+            foreach (var kvp in inventoryItems)
+            {
+                if (NormalizeKey(kvp.Key).Equals(normQuery, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+
+                if (itemDataLookup != null && itemDataLookup.TryGetValue(kvp.Key, out ItemSO so) && so != null)
+                {
+                    if (NormalizeKey(so.name).Equals(normQuery, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizeKey(so.itemName).Equals(normQuery, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizeKey(so.itemId).Equals(normQuery, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return kvp.Value;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Tiêu hao (sử dụng) một số lượng item từ kho đồ (tìm kiếm thông minh)
+        /// </summary>
+        public bool ConsumeItem(string itemId, int amount = 1)
+        {
+            if (inventoryItems == null || string.IsNullOrEmpty(itemId)) return false;
+
+            string targetKey = null;
+            if (inventoryItems.ContainsKey(itemId))
+            {
+                targetKey = itemId;
+            }
+            else
+            {
+                foreach (var k in inventoryItems.Keys)
+                {
+                    if (k.Equals(itemId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetKey = k;
+                        break;
+                    }
+                    if (itemDataLookup != null && itemDataLookup.TryGetValue(k, out ItemSO so) && so != null)
+                    {
+                        if (so.name.Equals(itemId, StringComparison.OrdinalIgnoreCase) ||
+                            so.itemName.Equals(itemId, StringComparison.OrdinalIgnoreCase) ||
+                            so.itemId.Equals(itemId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            targetKey = k;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(targetKey))
+            {
+                string normTarget = NormalizeKey(itemId);
+                foreach (var k in inventoryItems.Keys)
+                {
+                    if (NormalizeKey(k).Equals(normTarget, StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetKey = k;
+                        break;
+                    }
+                    if (itemDataLookup != null && itemDataLookup.TryGetValue(k, out ItemSO so) && so != null)
+                    {
+                        if (NormalizeKey(so.name).Equals(normTarget, StringComparison.OrdinalIgnoreCase) ||
+                            NormalizeKey(so.itemName).Equals(normTarget, StringComparison.OrdinalIgnoreCase) ||
+                            NormalizeKey(so.itemId).Equals(normTarget, StringComparison.OrdinalIgnoreCase))
+                        {
+                            targetKey = k;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(targetKey) && inventoryItems[targetKey] >= amount)
+            {
+                inventoryItems[targetKey] -= amount;
+                int newCount = inventoryItems[targetKey];
+
+                if (mainItemObjects.TryGetValue(targetKey, out GameObject obj) && obj != null)
+                {
+                    obj.SetActive(newCount >= 1);
+                }
+
+                if (itemQuantityTexts.TryGetValue(targetKey, out TMP_Text textComp) && textComp != null)
+                {
+                    textComp.text = $"x{newCount}";
+                }
+                Debug.Log($"[StationQuizController] Đã tiêu hao {amount} '{targetKey}'. Còn lại: {newCount}");
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Lấy toàn bộ danh sách item hiện có trong kho đồ
+        /// </summary>
+        public Dictionary<string, int> GetInventoryItems()
+        {
+            return inventoryItems != null ? new Dictionary<string, int>(inventoryItems) : new Dictionary<string, int>();
+        }
+
+        /// <summary>
+        /// Lấy thông tin ItemSO theo itemId
+        /// </summary>
+        public ItemSO GetItemSO(string itemId)
+        {
+            if (itemDataLookup == null || string.IsNullOrEmpty(itemId)) return null;
+            if (itemDataLookup.TryGetValue(itemId, out ItemSO itemSO))
+                return itemSO;
+
+            string norm = NormalizeKey(itemId);
+            foreach (var kvp in itemDataLookup)
+            {
+                if (NormalizeKey(kvp.Key).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+                if (kvp.Value != null)
+                {
+                    if (NormalizeKey(kvp.Value.name).Equals(norm, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizeKey(kvp.Value.itemName).Equals(norm, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizeKey(kvp.Value.itemId).Equals(norm, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return kvp.Value;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Lấy danh sách toàn bộ các item thuộc Theme của màn chơi hiện tại
+        /// </summary>
+        public List<ItemSO> GetCurrentThemeItems()
+        {
+            List<ItemSO> list = new List<ItemSO>();
+            if (availableThemes != null && currentMap != null)
+            {
+                ThemeSO matched = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+                if (matched != null && matched.themeItems != null)
+                {
+                    list.AddRange(matched.themeItems);
+                }
+            }
+            if (list.Count == 0 && itemDataLookup != null)
+            {
+                list.AddRange(itemDataLookup.Values);
+            }
+            return list;
         }
 
         /// <summary>
@@ -986,8 +1233,11 @@ namespace QuizGame
             ReduceRemainingCount();
             UpdateRemainText();
 
-            // Nhận thưởng item theo Theme hiển thị lên MainPanel/ItemContainer
-            RewardThemeItem(1);
+            // Nhận thưởng chính xác item mà người chơi vừa trả lời đúng
+            string rewardItemId = (currentActiveItemData != null && !string.IsNullOrEmpty(currentActiveItemData.itemId))
+                ? currentActiveItemData.itemId
+                : null;
+            RewardThemeItem(1, rewardItemId);
         }
 
         /// <summary>

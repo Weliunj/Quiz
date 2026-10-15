@@ -25,6 +25,9 @@ namespace QuizGame
         [Tooltip("Hệ thống quản lý câu hỏi và các trạm dừng (StationPanel & QuestPanel)")]
         [SerializeField] private StationQuizController stationQuiz;
 
+        [Tooltip("Hệ thống quản lý 5 Tim (HP) và Sự Kiện Thiên Tai")]
+        [SerializeField] private NaturalDisasterController naturalDisaster;
+
         [Header("--- NÚT BẤM (BUTTONS) ---")]
         [Tooltip("Nút Start ở màn hình chính để vào chọn map")]
         [SerializeField] private Button startBtn;
@@ -159,6 +162,12 @@ namespace QuizGame
                 {
                     stationQuiz = gamePanel.GetComponentInChildren<StationQuizController>(true);
                     if (stationQuiz == null) stationQuiz = gamePanel.AddComponent<StationQuizController>();
+                }
+
+                if (naturalDisaster == null)
+                {
+                    naturalDisaster = gamePanel.GetComponentInChildren<NaturalDisasterController>(true);
+                    if (naturalDisaster == null) naturalDisaster = gamePanel.AddComponent<NaturalDisasterController>();
                 }
             }
 
@@ -387,6 +396,12 @@ namespace QuizGame
                 stationQuiz.InitForMap(mapData);
             }
 
+            // Khởi tạo 5 tim (HP) khi bắt đầu màn chơi
+            if (naturalDisaster != null)
+            {
+                naturalDisaster.InitHp(5);
+            }
+
             mountainManager.OnStationReached -= HandleStationReached;
             mountainManager.OnStationReached += HandleStationReached;
 
@@ -460,11 +475,21 @@ namespace QuizGame
                 return;
             }
 
-            // Người chơi bắt đầu di chuyển trước 1 ít -> hiện rõ màn đen (theo closeDuration mặc định) -> gần tới trạm tiếp theo thì mở màn (theo openDuration mặc định)
+            if (naturalDisaster != null && !naturalDisaster.IsAlive)
+            {
+                Debug.LogWarning("[MapManager] Người chơi đã hết HP (0 tim)! Không thể leo núi tiếp.");
+                return;
+            }
+
+            // Kiểm tra xem lần leo này có xuất hiện thiên tai ở mốc giữa chặng (50%) hay không
+            bool willTriggerDisaster = (naturalDisaster != null && naturalDisaster.RollDisasterChance());
+
+            // Trình tự: Nhân vật bước đi trước -> hiện rõ màn đen -> nếu có thiên tai thì dừng ở giữa & chọn item -> gần tới trạm tiếp theo thì mở màn (mờ dần)
             mountainManager.MovePlayerToNextStation(
                 onComplete:     null,
                 onNearComplete: () => CutSceneTransition.Open(),
-                onDepart:       () => CutSceneTransition.Close()
+                onDepart:       () => CutSceneTransition.Close(),
+                onMidwayEvent:  willTriggerDisaster ? (onResume) => naturalDisaster.TriggerDisasterEvent(onResume) : null
             );
         }
 

@@ -33,6 +33,10 @@ namespace QuizGame
         [Tooltip("Tấm hình đen duy nhất (tự tìm hoặc căn full screen)")]
         [SerializeField] private Image fadeImage;
 
+        [Header("--- NHÂN VẬT BƯỚC ĐI (CUTSCENE ANIMATION) ---")]
+        [Tooltip("GameObject hiển thị nhân vật bước đi giữa màn hình khi màn đen đang bật (CutScreenPanel/WalkingCharacter)")]
+        [SerializeField] private GameObject walkingCharacter;
+
         [Header("--- TIMING ---")]
         [Tooltip("Thời gian hiện rõ dần (fade in - đóng màn che đen)")]
         [SerializeField] private float closeDuration = 0.22f;
@@ -143,6 +147,14 @@ namespace QuizGame
                     }
                 }
 
+                // Tìm walkingCharacter trong cutScreenPanel nếu chưa gán
+                if (walkingCharacter == null)
+                {
+                    Transform charT = cutScreenPanel.transform.Find("WalkingCharacter");
+                    if (charT == null) charT = cutScreenPanel.transform.Find("Character");
+                    if (charT != null) walkingCharacter = charT.gameObject;
+                }
+
                 // Nếu còn tấm RightBlackImg cũ, tắt đi để chỉ dùng duy nhất 1 tấm
                 Transform right = cutScreenPanel.transform.Find("RightBlackImg");
                 if (right != null && (fadeImage == null || right.gameObject != fadeImage.gameObject))
@@ -171,6 +183,11 @@ namespace QuizGame
                 fadeImage.color = c;
 
                 fadeImage.gameObject.SetActive(true);
+            }
+
+            if (walkingCharacter != null)
+            {
+                walkingCharacter.SetActive(false);
             }
 
             // Mặc định ở trạng thái mở (tàng hình)
@@ -261,6 +278,7 @@ namespace QuizGame
         public void SetClosedImmediate()
         {
             if (cutScreenPanel != null) cutScreenPanel.SetActive(true);
+            if (walkingCharacter != null) walkingCharacter.SetActive(true);
             SetAlpha(1f);
             _isClosed = true;
         }
@@ -269,6 +287,7 @@ namespace QuizGame
         public void SetOpenImmediate()
         {
             SetAlpha(0f);
+            if (walkingCharacter != null) walkingCharacter.SetActive(false);
             if (cutScreenPanel != null) cutScreenPanel.SetActive(false);
             _isClosed = false;
         }
@@ -279,6 +298,7 @@ namespace QuizGame
         {
             float dur = (duration > 0f) ? duration : closeDuration;
             if (cutScreenPanel != null) cutScreenPanel.SetActive(true);
+            if (walkingCharacter != null) walkingCharacter.SetActive(true);
             yield return StartCoroutine(CoFade(isClosing: true, dur));
             _isClosed = true;
             onComplete?.Invoke();
@@ -290,6 +310,7 @@ namespace QuizGame
             if (cutScreenPanel != null) cutScreenPanel.SetActive(true);
             yield return StartCoroutine(CoFade(isClosing: false, dur));
             _isClosed = false;
+            if (walkingCharacter != null) walkingCharacter.SetActive(false);
             if (cutScreenPanel != null) cutScreenPanel.SetActive(false);
             onComplete?.Invoke();
         }

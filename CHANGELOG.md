@@ -22,6 +22,77 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-15 17:50] — feat(cutscene-anim): add walking character sprite animation to cutscene black screen
+- **Tác vụ**:
+  - **Tạo component chuyên dụng `UISpriteAnimation.cs`**:
+    - Hoạt ảnh sprite mượt mà trực tiếp trên `UnityEngine.UI.Image` trong Canvas.
+    - Không cần Animator Controller hay AnimationClip dành cho 2D SpriteRenderer (vốn gây xung đột typeID và lỗi scale/pivot trên UI).
+    - Tự động nạp sprite từ `Character.png`, hỗ trợ tùy chỉnh tốc độ FPS, vòng lặp (`loop`), và giữ tỷ lệ nhân vật (`preserveAspect`).
+  - **Tích hợp vào `CutSceneTransition.cs`**:
+    - Thêm tham chiếu `walkingCharacter` (tự động tìm `CutScreenPanel/WalkingCharacter` hoặc `CutScreenPanel/Character`).
+    - Khi đóng màn đen (`Close()` / `SetClosedImmediate()`): tự động bật nhân vật bước đi ở giữa màn hình đen.
+    - Khi mở màn lộ game (`Open()` / `SetOpenImmediate()`): tự động tắt nhân vật bước đi.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/UISpriteAnimation.cs` (New file)
+  - `Assets/Scripts/CutSceneTransition.cs` (lines 35-45, 150-185, 275-315 modified)
+- **Ảnh hưởng**:
+  - Cho phép hiển thị hoạt ảnh nhân vật leo núi/đi bộ ngay trên màn đen chuyển cảnh một cách tự nhiên và mượt mà, giải quyết triệt để lỗi không chỉnh được Pivot khi dùng Sprite trong Canvas.
+
+### [2026-10-15 16:10] — fix(disaster-matching & quiz-reward): award exact clicked item and support flexible item matching
+- **Tác vụ**:
+  - **Sửa lỗi trả thưởng nhầm item khi trả lời câu hỏi trạm dừng (`StationQuizController.cs`)**:
+    - Trước đó `RewardThemeItem(1)` lấy ngẫu nhiên 1 item trong theme (`Random.Range`), khiến người chơi bấm chọn Campfire để làm câu hỏi nhưng lại bị thưởng nhầm Meat.
+    - Đã sửa để `HandleCorrectAnswer()` truyền chính xác ID item người chơi đang làm (`currentActiveItemData.itemId`), đảm bảo làm Campfire thì nhận đúng 100% là Campfire.
+    - Bổ sung hàm `NormalizeKey()` chuẩn hóa chuỗi và đối chiếu thông minh (chấp nhận cả `item_camfire1`, `item_campfire1`, `Campfire`, `campfire`) trong `RewardThemeItem`, `GetItemQuantity`, `ConsumeItem`, và `GetItemSO`.
+  - **Sửa lỗi chọn đúng Campfire đối phó thiên tai mà vẫn bị trừ HP (`NaturalDisasterController.cs`)**:
+    - **Nguyên nhân**: File `Campfire.asset` khai báo `itemId: item_camfire1` (thiếu chữ 'p'), trong khi trong Scene Inspector người dùng cấu hình thiên tai có `counterItemId: item_campfire1` (có chữ 'p'). So sánh trực tiếp `chosenItemId == disaster.counterItemId` dẫn tới `false` và trừ 1 HP vô lý.
+    - **Giải pháp**:
+      - Thêm hàm `NormalizeItemKey()` và `CheckItemMatches()`: tự động đồng bộ lỗi chính tả `camfire` <-> `campfire`, bỏ tiền tố `item_`, bỏ số thứ tự cuối, bỏ ký tự đặc biệt, và tra cứu qua `ItemSO`.
+      - Khắc phục biến closure trong vòng lặp `PopulateSelectItems` (`string capturedId = itemId;`).
+      - Khử trùng lặp (Deduplicate) danh sách item để không bao giờ sinh thừa nút trùng loại item.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (lines 430-610 modified)
+  - `Assets/Scripts/NaturalDisasterController.cs` (lines 460-630 modified)
+- **Ảnh hưởng**:
+  - Người chơi luôn nhận đúng item mình đã chọn làm bài tại trạm dừng.
+  - Chọn Campfire đối phó bão tuyết lở (Avalanche) được nhận diện chính xác 100%, trừ 1 Campfire và không bao giờ bị trừ HP oan.
+
+### [2026-10-15 15:35] — feat(natural-disasters-hp): 5 HP hearts and midway natural disaster event with item counter selection
+- **Tác vụ**:
+  - **Tạo hệ thống `NaturalDisasterController.cs`**:
+    - **Hệ thống 5 Tim (HP)**:
+      - Quản lý 5 tim trong `GamePanel/MainPanel/HpContainer` bằng `Hp.prefab`.
+      - Khởi tạo 5 tim khi bắt đầu map, tự động gắn `HorizontalLayoutGroup` để tim căn lề ngang gọn gàng.
+      - Cung cấp hàm `TakeDamage(1)` để trừ tim (tắt dần tim từ phải sang trái khi chọn sai item) và kiểm tra trạng thái sống `IsAlive`.
+    - **Hệ thống Thiên Tai (Natural Disasters)**:
+      - Danh sách thiên tai gồm tên, hình ảnh (`disasterSprite` như `AvalancheDisasters.png`), và mã `counterItemId` cần thiết để chống lại (ví dụ `item_camfire1` cho Bão Tuyết, `item_meat1` cho Thú Dữ).
+      - Xác suất xuất hiện thiên tai có thể cấu hình linh hoạt (`disasterEventChance`), có cờ `alwaysTriggerDisaster` để test.
+    - **Sự kiện giữa chặng leo núi (Midway Event at 50%)**:
+      - Khi màn đen đang bật và người chơi tới mốc giữa 2 trạm ($50\%$): nếu có thiên tai, người chơi dừng lại tại điểm giữa, màn đen tự động mở ra (`CutSceneTransition.Open()`).
+      - Bật `NaturalDisastersPanel`, thay ảnh thiên tai vào `NaturalDisastersPanel/Image`.
+      - Hiển thị tên thiên tai vào `NaturalDisastersPanel/Name`.
+      - Khởi động bộ đếm ngược thời gian tại `NaturalDisastersPanel/Time` (mặc định 10s). Nếu hết giờ mà chưa chọn item thì bị trừ 1 HP!
+      - Sinh các nút chọn item trong `NaturalDisastersPanel/SelectItemContainer` từ `SelectItemBtn.prefab`: **chỉ hiển thị những item có số lượng sở hữu $> 0$**, hiển thị tên (`NameText`) và số lượng (`NumberText`).
+    - **Xử lý lựa chọn item**:
+      - Dừng đếm ngược thời gian ngay khi người chơi bấm nút.
+      - Nếu chọn đúng item khắc chế: Không bị trừ HP, trừ 1 số lượng item đã dùng.
+      - Nếu chọn sai item (hoặc hết thời gian): Trừ 1 HP (mất 1 tim).
+      - Sau đó: Ẩn `NaturalDisastersPanel`, bật lại màn đen (`CutSceneTransition.Close()`), người chơi tiếp tục leo và mở màn (`CutSceneTransition.Open()`) khi gần tới trạm tiếp theo.
+  - **Cập nhật `MountainPlayerController.cs` & `MountainStationManager.cs`**:
+    - Bổ sung callback `Action<Action> onMidwayEvent` tại $t = 0.5f$ để dừng người chơi ở giữa đường và chờ sự kiện thiên tai hoàn thành rồi mới đi tiếp.
+  - **Cập nhật `StationQuizController.cs`**:
+    - Thêm các hàm helper: `GetItemQuantity()`, `ConsumeItem()`, `GetInventoryItems()`, `GetCurrentThemeItems()`.
+  - **Cập nhật `MapManager.cs`**:
+    - Tự động liên kết `NaturalDisasterController`, khởi tạo 5 tim khi bắt đầu chơi (`OpenGamePlay`), và kích hoạt thiên tai giữa chặng khi leo (`OnClimbButtonClicked`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (New file)
+  - `Assets/Scripts/StationQuizController.cs` (lines 450-520 modified)
+  - `Assets/Scripts/MountainPlayerController.cs` (lines 80-175 modified)
+  - `Assets/Scripts/MountainStationManager.cs` (lines 325-365 modified)
+  - `Assets/Scripts/MapManager.cs` (lines 25-475 modified)
+- **Ảnh hưởng**:
+  - Tích hợp hoàn chỉnh vòng lặp gameplay: Leo núi $\to$ gặp thiên tai ngẫu nhiên giữa chặng $\to$ dùng item tích lũy được từ trạm để sinh tồn $\to$ bảo toàn 5 tim đến đỉnh núi.
+
 ### [2026-10-15 15:05] — feat(cutscene-transition): single-panel fade transition for climb and scene transitions
 - **Tác vụ**:
   - **Tạo hệ thống chuyển cảnh `CutSceneTransition.cs`**:

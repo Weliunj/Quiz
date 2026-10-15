@@ -325,11 +325,12 @@ namespace QuizGame
 
         /// <summary>
         /// Di chuyển nhân vật người chơi lên trạm tiếp theo dọc theo đường mòn.
-        /// - onDepart: gọi khi người chơi đã rời trạm cũ đi trước 1 đoạn ngắn (~22% quãng đường) → kích hoạt che màn đen.
+        /// - onDepart: gọi khi người chơi đã rời trạm cũ đi trước 1 đoạn ngắn (~10% quãng đường) → kích hoạt che màn đen.
+        /// - onMidwayEvent: gọi tại điểm giữa 2 trạm (50%) nếu có sự kiện thiên tai.
         /// - onNearComplete: gọi khi gần đến trạm kế tiếp (~78% quãng đường) → kích hoạt mở màn mờ dần.
         /// - onComplete: gọi khi người chơi đã đặt chân tới trạm đích hoàn toàn.
         /// </summary>
-        public void MovePlayerToNextStation(Action onComplete = null, Action onNearComplete = null, Action onDepart = null)
+        public void MovePlayerToNextStation(Action onComplete = null, Action onNearComplete = null, Action onDepart = null, Action<Action> onMidwayEvent = null)
         {
             if (IsPlayerMoving) return;
             if (currentMap == null || currentMap.stationPositions == null) return;
@@ -360,7 +361,8 @@ namespace QuizGame
                         onComplete?.Invoke();
                     },
                     onNearComplete: onNearComplete,
-                    onDepart: onDepart
+                    onDepart: onDepart,
+                    onMidwayEvent: onMidwayEvent
                 );
             }
         }
