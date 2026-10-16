@@ -438,6 +438,7 @@ namespace QuizGame
             else if (s.StartsWith("item")) s = s.Substring(4);
             s = s.Replace("_", "").Replace("-", "").Replace(" ", "");
             s = s.Replace("camfire", "campfire");
+            if (s.Contains("emergencytent")) s = s.Replace("emergencytent", "tent");
             while (s.Length > 0 && char.IsDigit(s[s.Length - 1]))
             {
                 s = s.Substring(0, s.Length - 1);

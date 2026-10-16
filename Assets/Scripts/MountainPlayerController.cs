@@ -25,8 +25,25 @@ namespace QuizGame
         [Tooltip("Độ lệch trục Y của nhân vật so với mốc trạm")]
         [SerializeField] private float yOffset = 0.22f;
 
+        [Header("--- 2. HIỆU ỨNG CHUYỂN ĐỘNG / NHÚN NHẢY (BOBBING ANIMATION) ---")]
+        [Tooltip("Bật/tắt hiệu ứng icon nhún nhảy lên xuống khi đứng yên tại trạm (Idle)")]
+        [SerializeField] private bool enableIdleBobbing = true;
+
+        [Tooltip("Tốc độ chuyển động lên xuống khi đứng yên (tần số nhún)")]
+        [SerializeField] private float idleBobSpeed = 3.5f;
+
+        [Tooltip("Biên độ (độ cao) chuyển động lên xuống khi đứng yên")]
+        [SerializeField] private float idleBobHeight = 0.12f;
+
+        [Tooltip("Độ nảy (bước chân) khi đang di chuyển leo giữa 2 trạm")]
+        [SerializeField] private float moveHopHeight = 0.08f;
+
+        [Tooltip("Hiển thị bóng đổ dưới chân nhân vật")]
+        [SerializeField] private bool showShadow = true;
+
         private GameObject currentPlayerObj;
         private bool isPlayerMoving = false;
+        private Vector3 currentBasePos;
 
         public GameObject CurrentPlayerObj => currentPlayerObj;
         public bool IsPlayerMoving => isPlayerMoving;
@@ -39,22 +56,46 @@ namespace QuizGame
 
         public void SpawnOrUpdatePlayer(Transform parentRoot, Vector3 targetPos)
         {
+            currentBasePos = new Vector3(targetPos.x, targetPos.y + yOffset, -0.1f);
+
             if (currentPlayerObj == null)
             {
                 if (playerPrefab != null)
                 {
-                    currentPlayerObj = Instantiate(playerPrefab, parentRoot);
+                    // Tạo root object cho Player để camera bám theo vị trí cố định của trạm
+                    currentPlayerObj = new GameObject("Player_Climber");
+                    currentPlayerObj.transform.SetParent(parentRoot, false);
+
+                    if (showShadow)
+                    {
+                        CreateShadowObject(currentPlayerObj.transform, 1);
+                    }
+
+                    // Tạo container Visual để chứa Icon và thực hiện hoạt ảnh nhún nhảy
+                    GameObject visual = new GameObject("Visual");
+                    visual.transform.SetParent(currentPlayerObj.transform, false);
+
+                    GameObject iconInstance = Instantiate(playerPrefab, visual.transform);
+                    iconInstance.name = playerPrefab.name;
+                    iconInstance.transform.localPosition = Vector3.zero;
+                    iconInstance.transform.localRotation = Quaternion.identity;
                 }
                 else
                 {
                     currentPlayerObj = CreateDefaultPlayerObject();
                     currentPlayerObj.transform.SetParent(parentRoot, false);
                 }
-                currentPlayerObj.name = "Player_Climber";
             }
 
             currentPlayerObj.transform.localScale = new Vector3(playerScale, playerScale, 1f);
-            currentPlayerObj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, -0.1f);
+            currentPlayerObj.transform.position = currentBasePos;
+
+            Transform visualChild = currentPlayerObj.transform.Find("Visual");
+            if (visualChild != null)
+            {
+                visualChild.localPosition = Vector3.zero;
+            }
+
             currentPlayerObj.SetActive(true);
         }
 
@@ -161,9 +202,10 @@ namespace QuizGame
                         midTrailPos = Vector3.Lerp(startPos, targetFinalPos, 0.5f);
                     }
 
+                    currentBasePos = new Vector3(midTrailPos.x, midTrailPos.y + yOffset, -0.1f);
                     if (currentPlayerObj != null)
                     {
-                        currentPlayerObj.transform.position = new Vector3(midTrailPos.x, midTrailPos.y + yOffset, -0.1f);
+                        currentPlayerObj.transform.position = currentBasePos;
                     }
 
                     bool resumeClimb = false;
@@ -200,7 +242,7 @@ namespace QuizGame
                 }
 
                 // Hiệu ứng nhún nhảy bước chân khi leo
-                float hop = Mathf.Sin(t * Mathf.PI * 4f) * 0.08f;
+                float hop = Mathf.Sin(t * Mathf.PI * 4f) * moveHopHeight;
                 if (currentPlayerObj != null)
                 {
                     currentPlayerObj.transform.position = new Vector3(currentTrailPos.x, currentTrailPos.y + yOffset + hop, -0.1f);
@@ -220,9 +262,15 @@ namespace QuizGame
                 onNearComplete?.Invoke();
             }
 
+            currentBasePos = targetFinalPos;
             if (currentPlayerObj != null)
             {
                 currentPlayerObj.transform.position = targetFinalPos;
+                Transform visualChild = currentPlayerObj.transform.Find("Visual");
+                if (visualChild != null)
+                {
+                    visualChild.localPosition = Vector3.zero;
+                }
             }
 
             isPlayerMoving = false;
@@ -231,14 +279,32 @@ namespace QuizGame
 
         private void UpdatePlayerIdleAnimation()
         {
-            if (currentPlayerObj == null || isPlayerMoving) return;
+            if (currentPlayerObj == null || isPlayerMoving || !enableIdleBobbing) return;
+
+            float bob = Mathf.Sin(Time.time * idleBobSpeed) * idleBobHeight;
 
             Transform visualChild = currentPlayerObj.transform.Find("Visual");
             if (visualChild != null)
             {
-                float bob = Mathf.Sin(Time.time * 3.5f) * 0.05f;
                 visualChild.localPosition = new Vector3(0f, bob, 0f);
             }
+            else
+            {
+                // Fallback nếu không có child "Visual": di chuyển trực tiếp quanh mốc tọa độ gốc
+                currentPlayerObj.transform.position = new Vector3(currentBasePos.x, currentBasePos.y + bob, currentBasePos.z);
+            }
+        }
+
+        private void CreateShadowObject(Transform parent, int sortingOrder = 1)
+        {
+            GameObject shadow = new GameObject("Shadow", typeof(SpriteRenderer));
+            shadow.transform.SetParent(parent, false);
+            shadow.transform.localPosition = new Vector3(0f, -0.28f, 0.05f);
+            shadow.transform.localScale = new Vector3(0.55f, 0.22f, 1f);
+            SpriteRenderer srShadow = shadow.GetComponent<SpriteRenderer>();
+            srShadow.sprite = CreateCircleSprite(32);
+            srShadow.color = new Color(0f, 0f, 0f, 0.35f);
+            srShadow.sortingOrder = sortingOrder;
         }
 
         private GameObject CreateDefaultPlayerObject()
@@ -246,14 +312,10 @@ namespace QuizGame
             GameObject root = new GameObject("Player_Climber");
 
             // 1. Bóng đổ (Shadow)
-            GameObject shadow = new GameObject("Shadow", typeof(SpriteRenderer));
-            shadow.transform.SetParent(root.transform, false);
-            shadow.transform.localPosition = new Vector3(0f, -0.28f, 0.05f);
-            shadow.transform.localScale = new Vector3(0.55f, 0.22f, 1f);
-            SpriteRenderer srShadow = shadow.GetComponent<SpriteRenderer>();
-            srShadow.sprite = CreateCircleSprite(32);
-            srShadow.color = new Color(0f, 0f, 0f, 0.35f);
-            srShadow.sortingOrder = 8;
+            if (showShadow)
+            {
+                CreateShadowObject(root.transform, 8);
+            }
 
             // 2. Visual holder
             GameObject visual = new GameObject("Visual");

@@ -22,6 +22,45 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-16 13:38] — feat(disaster-dialog): typewriter warning & result dialogs with skip to full text and auto-close timer
+- **Tác vụ**:
+  - **Tích hợp hệ thống Dialog thông báo thiên tai (`NaturalDisasterController.cs`)**:
+    - **Dialog Cảnh Báo (trước khi tắt blackpanel)**:
+      - Khi gặp thiên tai tại 50% chặng leo, màn đen vẫn che kín và hiển thị Dialog cảnh báo tên thiên tai đang xuất hiện, yêu cầu chuẩn bị chọn 1 item đối phó.
+      - Chữ chạy ra từng ký tự mượt mà theo hiệu ứng Typewriter (`maxVisibleCharacters`).
+      - Bấm nút hoặc click màn hình để **Skip nhảy full text ngay lập tức**! Bấm tiếp sẽ đóng dialog, tắt màn đen (`Open()`), hiện bảng chọn item và đếm ngược 10s.
+      - Nếu không bấm gì: sau 3.5s sẽ tự động mở màn và vào sự kiện đối phó.
+    - **Dialog Kết Quả (sau khi chọn xong item hoặc hết giờ)**:
+      - Ẩn ngay panel chọn item và hiển thị Dialog thông báo kết quả:
+        - Thành công: Ghi chú rõ item đã đối phó thành công thiên tai, không mất HP.
+        - Thất bại: Ghi chú rõ item không thể đối phó, bị trừ 1 HP và mất 1 item.
+        - Hết giờ: Ghi chú không kịp chọn item, bị trừ 1 HP.
+      - Hỗ trợ gõ chữ typewriter, click skip full text, và tự động đóng sau 3.5s để bật lại màn đen (`Close()`) rồi tiếp tục hành trình leo núi.
+    - **Hỗ trợ tạo UI động thông minh**:
+      - Tự động dựng giao diện `DisasterDialogPanel` cực đẹp (backdrop mờ, khung card navy, tiêu đề, nội dung, nút bấm) nếu người dùng chưa tự thiết kế trong Scene, đồng thời hỗ trợ kéo thả component tùy chỉnh qua Inspector.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (lines 115-145, 230-380, 420-560, 750-840 modified)
+- **Ảnh hưởng**:
+  - Trải nghiệm cốt truyện và nhịp điệu game được nâng cấp rõ rệt, người chơi nắm rõ thông tin trước khi đối phó và hiểu rõ kết quả sau khi chọn item.
+
+### [2026-10-16 12:45] — feat(disaster-multi-counter): support multiple counter items per disaster and consume item on wrong selection
+- **Tác vụ**:
+  - **Hỗ trợ thiên tai khắc chế bằng nhiều item (`NaturalDisasterController.cs`)**:
+    - Bổ sung `counterItemIds` (dạng `List<string>`) vào class `DisasterData`.
+    - Người dùng có thể cấu hình 1 hoặc nhiều item ID khắc chế cho 1 thiên tai (ví dụ truyền 2 item: `item_snowanchor1` hoặc `item_emergencytent1`).
+    - Thêm hàm `GetAllValidCounterItems()` và `IsItemValidForDisaster()`: chỉ cần người chơi chọn đúng 1 trong các item hợp lệ thì sự kiện sẽ thành công, tiêu hao 1 item đó và không bị trừ HP.
+    - Giữ nguyên tính tương thích ngược với trường `counterItemId` đơn lẻ cũ.
+  - **Cơ chế tiêu hao item khi chọn sai**:
+    - Khi người chơi chọn **SAI** item:
+      - Vẫn **tiêu hao 1 item** đã chọn đó (`stationQuiz.ConsumeItem(chosenItemId, 1)`).
+      - Đồng thời **bị trừ 1 HP** (`TakeDamage(1)`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (lines 35-60, 220-250, 500-580, 700-750 modified)
+  - `Assets/Scripts/StationQuizController.cs` (lines 430-450 modified)
+- **Ảnh hưởng**:
+  - Cho phép gameplay giải quyết thiên tai linh hoạt hơn với nhiều giải pháp item khác nhau.
+  - Tăng độ thử thách và rủi ro: việc chọn bừa hoặc sai item sẽ làm mất cả tim (HP) lẫn item đã dùng.
+
 ### [2026-10-15 17:50] — feat(cutscene-anim): add walking character sprite animation to cutscene black screen
 - **Tác vụ**:
   - **Tạo component chuyên dụng `UISpriteAnimation.cs`**:

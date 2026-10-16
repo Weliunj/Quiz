@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75d7db76ee7935b4080bf50428e08071, type: 3}
   m_Name: Tent
   m_EditorClassIdentifier: Assembly-CSharp::QuizGame.ItemSO
-  itemId: item_tent1
-  itemName: Tent
-  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  itemId: item_emergencytent
+  itemName: "L\u1EC1u kh\u1EA9n c\u1EA5p"
+  icon: {fileID: -8036121529818745180, guid: 3c089103d3bea1f42bde4dd6de6567e9, type: 3}

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 985774cf8c8db7d439bcce6da35b1b10
+guid: 69a065d99a2102f428094f5fbb792baf
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7292794186719488528
-    second: Gemini_Generated_Image_179s5c179s5c179s_0
+      213: -4996859739680255763
+    second: 85a7a1a8-fa49-40f5-9471-34a7e0b3bfa0-removebg-preview_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Avalanche
+      name: RawMeat_0
       rect:
         serializedVersion: 2
-        x: 408
-        y: 272
-        width: 2344
-        height: 1264
+        x: 0
+        y: 0
+        width: 500
+        height: 500
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 0f51d88735acaca90800000000000000
-      internalID: -7292794186719488528
+      spriteID: 33179b30cc3fa3246a8a15f6821c42cc
+      internalID: 1149153101
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: bd4481f6d7ffbfa4bacf32d9f2a68415
+    spriteID: 4f5ba72cb986e5746913a2c16f9ee4ec
     internalID: 0
     vertices: []
     indices: 
@@ -146,9 +146,11 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries: []
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":500.0,"y":500.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      Avalanche: -7292794186719488528
+      RawMeat_0: 1149153101
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

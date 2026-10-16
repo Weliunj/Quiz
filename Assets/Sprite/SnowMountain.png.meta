@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 04b141cd0870e5140ae2ca20a486dbf8
+guid: 4616ade609317dd44be3ae96a1d04a98
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1127507637206836536
-    second: Gemini_Generated_Image_hw0e4ihw0e4ihw0e_0
+      213: 8604285044931192572
+    second: Gemini_Generated_Image_fkipcsfkipcsfkip_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SnowMountain_0
+      name: Gemini_Generated_Image_fkipcsfkipcsfkip_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 2752
         height: 1536
-      alignment: 9
+      alignment: 7
       pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 1ebaa23d47adc8f4a99f62fb89cd08da
-      internalID: -1098159029
+      spriteID: cf6645139af886770800000000000000
+      internalID: 8604285044931192572
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 51b50a16b772e3544a3eeb31abaad936
+    spriteID: 6d949f26366e0704da1f2ebb30a95a49
     internalID: 0
     vertices: []
     indices: 
@@ -146,11 +146,9 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries:
-      - key: SpriteEditor.SliceSettings
-        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+      entries: []
     nameFileIdTable:
-      SnowMountain_0: -1098159029
+      Gemini_Generated_Image_fkipcsfkipcsfkip_0: 8604285044931192572
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 75d7db76ee7935b4080bf50428e08071, type: 3}
-  m_Name: Campfire
+  m_Name: Flare
   m_EditorClassIdentifier: Assembly-CSharp::QuizGame.ItemSO
-  itemId: item_campfire1
-  itemName: Campfire
-  icon: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
+  itemId: item_flare
+  itemName: "Ph\xE1o s\xE1ng"
+  icon: {fileID: -6223942951423680453, guid: 7b126ed818e91144a8fe6075bb044189, type: 3}

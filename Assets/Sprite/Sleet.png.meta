@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1e3cea1d9c62c074eb10230fc81a0fa5
+guid: be411d1c447336d4f87d9bd796f4d9e1
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3208553203886539923
-    second: Gemini_Generated_Image_djudy8djudy8djud_0
+      213: 333309073748713176
+    second: Gemini_Generated_Image_l5ndk4l5ndk4l5nd_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -116,10 +116,10 @@ TextureImporter:
       name: Sleet
       rect:
         serializedVersion: 2
-        x: 545
-        y: 291
-        width: 2207
-        height: 1245
+        x: 0
+        y: 0
+        width: 2752
+        height: 1536
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3944998a322178c20800000000000000
-      internalID: 3208553203886539923
+      spriteID: 8ded43d26d620a400800000000000000
+      internalID: 333309073748713176
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 74c9b4a08120bff49acf34d086168421
+    spriteID: 0068a89361ecfb94797c40064aaf3358
     internalID: 0
     vertices: []
     indices: 
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Sleet: 3208553203886539923
+      Sleet: 333309073748713176
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
