@@ -21,6 +21,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9bfe495509776064b9171f7086304ad8, type: 2}
   counterItemId: item_bearspray
   counterItemIds: []
+  successChance: 0.8
   warningMessage: "M\u1ED9t con g\u1EA5u tuy\u1EBFt kh\u1ED5ng l\u1ED3 \u0111\xF3i
     l\u1EED g\u1EA7m r\u1ED1ng lao th\u1EB3ng t\u1EDBi! H\xE3y nhanh ch\xF3ng d\xF9ng
     v\u1EADt ph\u1EA9m \u0111\u1EC3 t\u1EF1 v\u1EC7 ho\u1EB7c \u0111\xE1nh l\u1EA1c
@@ -30,3 +31,6 @@ MonoBehaviour:
     c\xF4ng."
   failureMessage: "{item} ho\xE0n to\xE0n kh\xF4ng c\xF3 t\xE1c d\u1EE5ng v\u1EDBi
     con g\u1EA5u hung d\u1EEF!\n-1 HP"
+  badLuckFailureMessage: "D\xF9 \u0111\xE3 s\u1EED d\u1EE5ng {item}, nh\u01B0ng con
+    g\u1EA5u tuy\u1EBFt qu\xE1 hung h\xE3n v\xE0 m\u1EA5t ki\u1EC3m so\xE1t n\xEAn
+    v\u1EABn k\u1ECBp c\xE0o tr\xFAng b\u1EA1n!\n-1 HP"

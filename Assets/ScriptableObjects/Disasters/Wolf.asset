@@ -20,6 +20,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 02995b627f0e4cf4b982556fdad4bb46, type: 2}
   counterItemId: item_meat
   counterItemIds: []
+  successChance: 0.8
   warningMessage: "M\u1ED9t \u0111\xE0n s\xF3i tuy\u1EBFt hung d\u1EEF v\u1EDBi \u0111\xF4i
     m\u1EAFt \u0111\u1ECF r\u1EF1c \u0111ang v\xE2y quanh b\u1EA1n g\u1EA7m g\u1EEB!
     Mau ch\u1ECDn v\u1EADt ph\u1EA9m \u0111\u1EC3 xua \u0111u\u1ED5i ho\u1EB7c \u0111\xE1nh
@@ -29,3 +30,6 @@ MonoBehaviour:
     v\xE2y an to\xE0n."
   failureMessage: "{item} kh\xF4ng th\u1EC3 ng\u0103n c\u1EA3n b\u1EA7y s\xF3i tuy\u1EBFt
     hung h\xE3n \u0111ang \u0111\xF3i l\u1EED!\n-1 HP"
+  badLuckFailureMessage: "D\xF9 \u0111\xE3 d\xF9ng {item} \u0111\u1EC3 \u0111\xE1nh
+    l\u1EA1c h\u01B0\u1EDBng, nh\u01B0ng m\u1ED9t con s\xF3i \u0111\u1EA7u \u0111\xE0n
+    tinh kh\xF4n v\u1EABn lao t\u1EDBi t\u1EA5n c\xF4ng b\u1EA1n!\n-1 HP"

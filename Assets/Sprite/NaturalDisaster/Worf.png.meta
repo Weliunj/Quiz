@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Worf
+      name: Event_Worf
       rect:
         serializedVersion: 2
         x: 0
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Worf: -1822441098564050268
+      Event_Worf: -1822441098564050268
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

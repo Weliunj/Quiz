@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Avalanche
+      name: Event_Avalanche
       rect:
         serializedVersion: 2
         x: 0
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Avalanche: -1317903327716568654
+      Event_Avalanche: -1317903327716568654
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

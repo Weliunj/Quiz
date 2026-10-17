@@ -32,16 +32,16 @@ namespace QuizGame
         [Tooltip("Số lượng tim tối đa khi bắt đầu")]
         [SerializeField] private int maxHp = 5;
 
-        [Header("--- 2. DANH SÁCH THIÊN TAI (DISASTERS - SCRIPTABLE OBJECT) ---")]
-        [Tooltip("Danh sách các thiên tai có thể xảy ra (Kéo thả các file DisasterSO từ Assets/ScriptableObjects/Disasters/)")]
-        [SerializeField] private List<DisasterSO> disasterList = new List<DisasterSO>();
-
+        [Header("--- 2. CẤU HÌNH TỶ LỆ THIÊN TAI ---")]
         [Tooltip("Tỷ lệ xuất hiện sự kiện thiên tai khi leo giữa 2 trạm (0 = tắt, 1 = 100%)")]
         [Range(0f, 1f)]
         [SerializeField] private float disasterEventChance = 0.65f;
 
         [Tooltip("Bật để luôn luôn kích hoạt thiên tai mỗi khi leo núi (dành cho test)")]
         [SerializeField] private bool alwaysTriggerDisaster = false;
+
+        // Danh sách thiên tai đang áp dụng cho map hiện tại (lấy động từ ThemeSO khi vào map)
+        private List<DisasterSO> activeDisasters = new List<DisasterSO>();
 
         [Header("--- 3. UI GIAO DIỆN THIÊN TAI ---")]
         [Tooltip("Panel thiên tai (GamePanel/NaturalDisastersPanel)")]
@@ -267,6 +267,51 @@ namespace QuizGame
             return null;
         }
 
+        /// <summary>
+        /// Khởi tạo sự kiện thiên tai theo Theme của Map (lấy các thiên tai được gán trong ThemeSO)
+        /// </summary>
+        public void InitForMap(MapData mapData, ThemeSO theme = null)
+        {
+            activeDisasters.Clear();
+
+            if (theme == null && mapData != null && !string.IsNullOrEmpty(mapData.themeId))
+            {
+                theme = FindThemeById(mapData.themeId);
+            }
+
+            if (theme != null && theme.themeDisasters != null && theme.themeDisasters.Count > 0)
+            {
+                activeDisasters.AddRange(theme.themeDisasters);
+                Debug.Log($"[NaturalDisasterController] Đã nạp {activeDisasters.Count} sự kiện thiên tai từ ThemeSO '{theme.themeName}'!");
+            }
+            else
+            {
+                Debug.LogWarning("[NaturalDisasterController] Theme không có danh sách thiên tai (themeDisasters). Không kích hoạt thiên tai cho map này.");
+            }
+        }
+
+        private ThemeSO FindThemeById(string themeId)
+        {
+            ThemeSO[] loaded = Resources.FindObjectsOfTypeAll<ThemeSO>();
+            if (loaded != null)
+            {
+                foreach (var t in loaded)
+                {
+                    if (t != null && t.themeId == themeId) return t;
+                }
+            }
+#if UNITY_EDITOR
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
+            foreach (var g in guids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                ThemeSO tSO = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
+                if (tSO != null && tSO.themeId == themeId) return tSO;
+            }
+#endif
+            return null;
+        }
+
         // ─── 1. HP SYSTEM (TIM) ───────────────────────────────────────────────────
 
         /// <summary>
@@ -382,7 +427,7 @@ namespace QuizGame
         public bool RollDisasterChance()
         {
             if (alwaysTriggerDisaster) return true;
-            if (disasterList == null || disasterList.Count == 0) return false;
+            if (activeDisasters == null || activeDisasters.Count == 0) return false;
             return UnityEngine.Random.value <= disasterEventChance;
         }
 
@@ -602,6 +647,23 @@ namespace QuizGame
                     ? FormatDialogTemplate(disaster.failureMessage, itemName, dName, _currentHp, maxHp)
                     : $"Vật phẩm <color=#E57373><b>{itemName}</b></color> <color=#E57373><b>KHÔNG THỂ ĐỐI PHÓ</b></color> được <color=#FFD54F>{dName}</color>!\n<color=#E57373><b>-1 HP</b></color>";
             }
+
+            ShowDialogInternal(DisasterDialogType.Failure, title, message, "Tiếp Tục", onConfirm, delay);
+        }
+
+        /// <summary>
+        /// Hiển thị Dialog khi chọn ĐÚNG vật phẩm nhưng KHÔNG MAY MẮN thất bại do xác suất rủi ro (successChance < 1)
+        /// </summary>
+        public void ShowBadLuckFailureDialog(DisasterSO disaster, string chosenItemId, string itemName, Action onConfirm, float autoCloseDelay = -1f)
+        {
+            float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
+            string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
+
+            string title = "⚠️ KHÔNG MAY MẮN!";
+
+            string message = (!string.IsNullOrEmpty(disaster?.badLuckFailureMessage))
+                ? FormatDialogTemplate(disaster.badLuckFailureMessage, itemName, dName, _currentHp, maxHp)
+                : $"Dù bạn đã dùng vật phẩm đúng là <color=#FFD54F><b>{itemName}</b></color>, nhưng do điều kiện <color=#FFD54F>{dName}</color> quá bất lợi và khắc nghiệt, vật phẩm không thể phát huy hết hiệu quả!\n<color=#E57373><b>-1 HP</b></color>";
 
             ShowDialogInternal(DisasterDialogType.Failure, title, message, "Tiếp Tục", onConfirm, delay);
         }
@@ -849,8 +911,8 @@ namespace QuizGame
 
         private DisasterSO PickRandomDisaster()
         {
-            if (disasterList == null || disasterList.Count == 0) return null;
-            var validDisasters = disasterList.FindAll(d => d != null);
+            if (activeDisasters == null || activeDisasters.Count == 0) return null;
+            var validDisasters = activeDisasters.FindAll(d => d != null);
             if (validDisasters == null || validDisasters.Count == 0) return null;
             int idx = UnityEngine.Random.Range(0, validDisasters.Count);
             return validDisasters[idx];
@@ -1133,27 +1195,54 @@ namespace QuizGame
 
             if (isCorrect && availableCount > 0)
             {
-                // Chọn ĐÚNG và CÓ ITEM -> Tiêu hao 1 item, Thành công (Không trừ HP)
+                // Chọn ĐÚNG và CÓ ITEM -> Tiêu hao 1 item
                 if (stationQuiz != null)
                 {
                     stationQuiz.ConsumeItem(chosenItemId, 1);
                 }
-                Debug.Log($"[NaturalDisaster] 🎉 ĐỐI PHÓ THÀNH CÔNG thiên tai '{dName}' bằng '{chosenItemId}'! Đã tiêu hao 1 item, không bị trừ HP.");
 
-                // HIỂN THỊ DIALOG THÀNH CÔNG (panel thiên tai vẫn hiển thị phía sau)
-                ShowSuccessDialog(disaster, chosenItemId, itemName, () =>
+                // Kiểm tra tỷ lệ thành công (successChance: 0.0 -> 1.0)
+                float chance = (disaster != null) ? Mathf.Clamp01(disaster.successChance) : 1f;
+                bool isSuccess = (UnityEngine.Random.value <= chance);
+
+                if (isSuccess)
                 {
-                    // Khi đóng dialog -> MỚI TẮT naturalDisastersPanel và che màn đen
-                    if (naturalDisastersPanel != null)
-                    {
-                        naturalDisastersPanel.SetActive(false);
-                    }
+                    Debug.Log($"[NaturalDisaster] 🎉 ĐỐI PHÓ THÀNH CÔNG thiên tai '{dName}' bằng '{chosenItemId}' (Tỷ lệ: {chance * 100:0.#}%)! Đã tiêu hao 1 item, không bị trừ HP.");
 
-                    CutSceneTransition.Close(onComplete: () =>
+                    // HIỂN THỊ DIALOG THÀNH CÔNG (panel thiên tai vẫn hiển thị phía sau)
+                    ShowSuccessDialog(disaster, chosenItemId, itemName, () =>
                     {
-                        onResume?.Invoke();
-                    }, duration: 0.22f);
-                }, defaultDialogAutoCloseTime);
+                        // Khi đóng dialog -> MỚI TẮT naturalDisastersPanel và che màn đen
+                        if (naturalDisastersPanel != null)
+                        {
+                            naturalDisastersPanel.SetActive(false);
+                        }
+
+                        CutSceneTransition.Close(onComplete: () =>
+                        {
+                            onResume?.Invoke();
+                        }, duration: 0.22f);
+                    }, defaultDialogAutoCloseTime);
+                }
+                else
+                {
+                    // Dù chọn đúng vật phẩm nhưng xui xẻo trúng tỷ lệ thất bại (rủi ro ngẫu nhiên) -> Trừ 1 HP!
+                    TakeDamage(1);
+                    Debug.LogWarning($"[NaturalDisaster] ⚠️ Dù chọn đúng '{chosenItemId}' nhưng không may mắn thất bại theo tỷ lệ rủi ro (Tỷ lệ thành công: {chance * 100:0.#}%)! Đã bị trừ 1 HP.");
+
+                    ShowBadLuckFailureDialog(disaster, chosenItemId, itemName, () =>
+                    {
+                        if (naturalDisastersPanel != null)
+                        {
+                            naturalDisastersPanel.SetActive(false);
+                        }
+
+                        CutSceneTransition.Close(onComplete: () =>
+                        {
+                            onResume?.Invoke();
+                        }, duration: 0.22f);
+                    }, defaultDialogAutoCloseTime);
+                }
             }
             else
             {

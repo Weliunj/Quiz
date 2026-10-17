@@ -19,6 +19,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4d58d7ada16ecf54a98cd768520ea69f, type: 2}
   counterItemId: item_snowanchor
   counterItemIds: []
+  successChance: 0.8
   warningMessage: "M\u1ED9t \u0111\u1EE3t tuy\u1EBFt l\u1EDF kinh ho\xE0ng \u0111ang
     tr\xE0n xu\u1ED1ng s\u01B0\u1EDDn n\xFAi! H\xE3y nhanh ch\xF3ng ch\u1ECDn thi\u1EBFt
     b\u1ECB th\xEDch h\u1EE3p \u0111\u1EC3 c\u1ED1 \u0111\u1ECBnh v\u1ECB tr\xED!"
@@ -27,3 +28,7 @@ MonoBehaviour:
     kh\u1ED1i tuy\u1EBFt l\u1EDF."
   failureMessage: "{item} kh\xF4ng th\u1EC3 ch\u1ECBu n\u1ED5i s\u1EE9c n\u1EB7ng
     ng\xE0n c\xE2n c\u1EE7a b\xE3o tuy\u1EBFt l\u1EDF!\n-1 HP"
+  badLuckFailureMessage: "D\xF9 \u0111\xE3 d\xF9ng {item} c\u1ED1 \u0111\u1ECBnh
+    v\u1ECB tr\xED, nh\u01B0ng s\u1EE9c \xE9p kh\u1EE7ng khi\u1EBFp c\u1EE7a \u0111\u1EE3t
+    tuy\u1EBFt l\u1EDF v\u1EABn \u0111\xE8 s\u1EADp n\u01A1i \u1EA9n n\u1EA5p!\n-1
+    HP"

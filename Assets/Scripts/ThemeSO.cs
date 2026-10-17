@@ -15,6 +15,9 @@ namespace QuizGame
         [Tooltip("Danh sách các ItemSO thuộc theme này")]
         public List<ItemSO> themeItems = new List<ItemSO>();
 
+        [Tooltip("Danh sách các sự kiện thiên tai (DisasterSO) có thể xảy ra trong theme này")]
+        public List<DisasterSO> themeDisasters = new List<DisasterSO>();
+
         [Tooltip("Ảnh nền bản đồ / ngọn núi (Map Background) theo theme này")]
         public Sprite mapBg;
 

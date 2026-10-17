@@ -445,9 +445,10 @@ namespace QuizGame
                 stationQuiz.OnStationOpenStateChanged += HandleStationOpenStateChanged;
             }
 
-            // Khởi tạo 5 tim (HP) khi bắt đầu màn chơi
+            // Khởi tạo 5 tim (HP) và nạp thiên tai theo Theme của Map khi bắt đầu màn chơi
             if (naturalDisaster != null)
             {
+                naturalDisaster.InitForMap(mapData);
                 naturalDisaster.InitHp(5);
             }
 

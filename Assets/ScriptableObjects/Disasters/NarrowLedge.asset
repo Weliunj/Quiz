@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60718293a4b5c6d7e8f90, type: 3}
+  m_Name: NarrowLedge
+  m_EditorClassIdentifier: Assembly-CSharp::QuizGame.DisasterSO
+  disasterId: disaster_narrowledge
+  disasterName: "M\u1ECFm \u0111\xE1 h\u1EB9p"
+  disasterSprite: {fileID: -7613870349956593997, guid: 62062091629921144bfdadd19381068e, type: 3}
+  counterItems:
+  - {fileID: 11400000, guid: 4d58d7ada16ecf54a98cd768520ea69f, type: 2}
+  counterItemId: item_snowanchor
+  counterItemIds: []
+  successChance: 0.8
+  warningMessage: "\u0110\u01B0\u1EDDng \u0111i ph\xEDa tr\u01B0\u1EDBc l\xE0 m\u1ED9t
+    m\u1ECFm \u0111\xE1 h\u1EB9p tr\u01A1n tr\u01B0\u1EE3t b\xEAn b\u1EDD v\u1EF1c
+    s\xE2u th\u0103m th\u1EB3m! H\xE3y nhanh ch\xF3ng ch\u1ECDn thi\u1EBFt b\u1ECB
+    th\xEDch h\u1EE3p \u0111\u1EC3 neo gi\u1EEF an to\xE0n!"
+  successMessage: "B\u1EA1n \u0111\xE3 k\u1ECBp th\u1EDDi d\xF9ng {item} g\u0103m
+    ch\u1EB7t v\xE0o v\xE1ch \u0111\xE1 ki\xEAn c\u1ED1, t\u1EA1o \u0111i\u1EC3m
+    t\u1EF1a an to\xE0n \u0111\u1EC3 v\u01B0\u1EE3t qua m\u1ECFm \u0111\xE1 hi\u1EC3m
+    tr\u1EDF!"
+  failureMessage: "{item} kh\xF4ng th\u1EC3 t\u1EA1o \u0111i\u1EC3m t\u1EF1a an to\xE0n
+    tr\xEAn v\xE1ch \u0111\xE1 tr\u01A1n tr\u01B0\u1EE3t, khi\u1EBFn b\u1EA1n tr\u01B0\u1EE3t
+    ch\xE2n ch\u1EDBi v\u1EDBi b\xEAn m\xE9p v\u1EF1c!\n-1 HP"
+  badLuckFailureMessage: "D\xF9 \u0111\xE3 d\xF9ng {item} c\u1EAFm v\xE0o v\xE1ch,
+    nh\u01B0ng l\u1EDBp \u0111\xE1 m\u1EE7n b\u1EA5t ng\u1EDD n\u1EE9t to\xE1c khi\u1EBFn
+    b\u1EA1n b\u1ECB tr\u01B0\u1EE3t ng\xE3!\n-1 HP"

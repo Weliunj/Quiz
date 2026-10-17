@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Sleet
+      name: Event_Sleet
       rect:
         serializedVersion: 2
         x: 0
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Sleet: 333309073748713176
+      Event_Sleet: 333309073748713176
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

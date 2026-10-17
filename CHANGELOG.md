@@ -22,6 +22,47 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-17 22:45] — refactor(disaster): remove fallback loading & disasterList from Inspector, populate bad luck text in SOs
+- **Tác vụ**:
+  - **Xóa bỏ fallback và danh sách thiên tai dự phòng trên Inspector (`NaturalDisasterController.cs`)**:
+    - Xóa trường `[SerializeField] private List<DisasterSO> disasterList`. Thay bằng danh sách nội bộ runtime `private List<DisasterSO> activeDisasters`.
+    - Xóa bỏ hoàn toàn phương thức `EnsureDisastersLoaded()`. Thiên tai nay được nạp 100% từ `ThemeSO.themeDisasters` của chủ đề bản đồ đang chơi. Nếu theme không có danh sách thiên tai thì không tự ý nạp từ Assets/Resources.
+    - Cập nhật các hàm `RollDisasterChance()` và `PickRandomDisaster()` sử dụng `activeDisasters`.
+  - **Thêm nội dung Bad Luck Text và tỷ lệ thành công vào toàn bộ các asset ScriptableObject (`DisasterSO`)**:
+    - Cập nhật trường `badLuckFailureMessage` và cấu hình `successChance: 0.85` cho tất cả 5 thiên tai:
+      - `NarrowLedge.asset`: Thông báo khi dùng mỏm đá/neo leo núi nhưng bị nứt vách đá trượt ngã.
+      - `Avalanche.asset`: Thông báo khi cố định vị trí nhưng sức ép tuyết lở quá lớn làm sập nơi ẩn nấp.
+      - `Bear.asset`: Thông báo khi gấu tuyết quá hung hãn vẫn kịp cào trúng người chơi.
+      - `Sleet.asset`: Thông báo khi bão tuyết gió giật làm tốc mái lều trú ẩn.
+      - `Wolf.asset`: Thông báo khi sói đầu đàn tinh khôn vẫn lao tới tấn công.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs`
+  - `Assets/ScriptableObjects/Disasters/NarrowLedge.asset`
+  - `Assets/ScriptableObjects/Disasters/Avalanche.asset`
+  - `Assets/ScriptableObjects/Disasters/Bear.asset`
+  - `Assets/ScriptableObjects/Disasters/Sleet.asset`
+  - `Assets/ScriptableObjects/Disasters/Wolf.asset`
+- **Ảnh hưởng**: Inspector của NaturalDisasterController gọn gàng không còn ô Disaster List thừa; sự kiện thiên tai tuân thủ nghiêm ngặt danh sách theo Theme; kịch bản rủi ro không may mắn (bad luck) có lời thoại chuyên biệt cho từng thiên tai.
+
+### [2026-10-17 22:30] — feat(disaster): support theme-specific events in ThemeSO and configurable success chance (0.0 to 1.0)
+- **Tác vụ**:
+  - **Quản lý danh sách sự kiện/thiên tai theo từng ThemeSO (`ThemeSO.cs`)**:
+    - Thêm danh sách `public List<DisasterSO> themeDisasters` vào `ThemeSO`. Cho phép mỗi Theme (Núi tuyết, Sa mạc, Rừng rậm...) tự quản lý danh sách các thiên tai/sự kiện đặc thù của riêng mình.
+    - Trong `NaturalDisasterController.cs`: thêm hàm `InitForMap(MapData, ThemeSO)` để nạp danh sách thiên tai tương ứng với Theme của map đang chơi (kèm cơ chế tự động tìm nạp fallback).
+    - Trong `MapManager.cs`: gọi `naturalDisaster.InitForMap(mapData)` khi người chơi bắt đầu chặng leo núi.
+  - **Thêm tỷ lệ thành công (Success Chance 0.0 -> 1.0) cho từng thiên tai (`DisasterSO.cs`)**:
+    - Thêm trường `[Range(0f, 1f)] public float successChance = 1f;` và `badLuckFailureMessage` vào `DisasterSO`.
+    - Trong `NaturalDisasterController.cs`: khi người chơi dùng đúng vật phẩm khắc chế, hệ thống sẽ kiểm tra xác suất thành công theo `successChance`. Nếu thành công sẽ không mất HP, nếu gặp rủi ro thất bại theo tỷ lệ sẽ trừ 1 HP và hiện thông báo phù hợp.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/ThemeSO.cs`
+  - `Assets/Scripts/DisasterSO.cs`
+  - `Assets/Scripts/NaturalDisasterController.cs`
+  - `Assets/Scripts/MapManager.cs`
+  - `Assets/ScriptableObjects/MapTheme/SnowMountain.asset`
+- **Ảnh hưởng**: Cho phép cấu hình sự kiện thiên tai linh hoạt theo từng Theme và tùy biến xác suất thành công cho từng loại hiểm nguy.
+
+
+
 ### [2026-10-17 17:52] — feat(ui): add configurable character limit and automatic TextMeshPro Ellipsis (...) overflow
 - **Tác vụ**:
   - **Hỗ trợ hiển thị dấu ba chấm `...` khi văn bản dài quá giới hạn trên thẻ câu hỏi (`QuestionItemUI.cs`)**:

@@ -26,6 +26,11 @@ namespace QuizGame
         [Tooltip("Danh sách mã itemId dự phòng")]
         public List<string> counterItemIds = new List<string>();
 
+        [Header("--- TỶ LỆ THÀNH CÔNG (0.0 -> 1.0) ---")]
+        [Tooltip("Cơ hội thành công khi người chơi dùng đúng vật phẩm đối phó (0.0 = 0%, 1.0 = 100%, ví dụ 0.8 là 80% thành công)")]
+        [Range(0f, 1f)]
+        public float successChance = 1f;
+
         [Header("--- THÔNG ĐIỆP DIALOG CHO THIÊN TAI NÀY ---")]
         [TextArea(2, 4)]
         [Tooltip("Nội dung cảnh báo khi thiên tai xuất hiện (để trống sẽ dùng mặc định. Hỗ trợ thẻ {disaster})")]
@@ -38,6 +43,10 @@ namespace QuizGame
         [TextArea(2, 4)]
         [Tooltip("Nội dung khi đối phó THẤT BẠI (để trống sẽ dùng mặc định. Hỗ trợ thẻ {item}, {disaster}, {hp}, {maxhp})")]
         public string failureMessage = "";
+
+        [TextArea(2, 4)]
+        [Tooltip("Nội dung khi dùng ĐÚNG vật phẩm nhưng KHÔNG MAY MẮN thất bại do xác suất rủi ro (để trống sẽ dùng thông báo mặc định)")]
+        public string badLuckFailureMessage = "";
 
         /// <summary>
         /// Lấy toàn bộ danh sách mã item khắc chế hợp lệ (kết hợp cả counterItems dạng ScriptableObject và chuỗi string)

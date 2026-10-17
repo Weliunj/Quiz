@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Bear
+      name: Event_Bear
       rect:
         serializedVersion: 2
         x: 0
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Bear: 5615735076941066674
+      Event_Bear: 5615735076941066674
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

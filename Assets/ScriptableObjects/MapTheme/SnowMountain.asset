@@ -20,5 +20,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9bfe495509776064b9171f7086304ad8, type: 2}
   - {fileID: 11400000, guid: 4d58d7ada16ecf54a98cd768520ea69f, type: 2}
   - {fileID: 11400000, guid: ba7e05c1bee238643a06495d13d74077, type: 2}
+  themeDisasters:
+  - {fileID: 11400000, guid: b101c202d303e404f505a606b707c808, type: 2}
+  - {fileID: 11400000, guid: b301c202d303e404f505a606b707c808, type: 2}
+  - {fileID: 11400000, guid: 22e79324e3a6d864eb3900d040797d28, type: 2}
+  - {fileID: 11400000, guid: b201c202d303e404f505a606b707c808, type: 2}
+  - {fileID: 11400000, guid: b401c202d303e404f505a606b707c808, type: 2}
   mapBg: {fileID: 8604285044931192572, guid: 4616ade609317dd44be3ae96a1d04a98, type: 3}
-  themeColor: {r: 0.60691816, g: 1, b: 0.94503653, a: 1}
+  themeColor: {r: 1, g: 1, b: 1, a: 1}
