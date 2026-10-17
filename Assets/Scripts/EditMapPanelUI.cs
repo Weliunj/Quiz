@@ -14,52 +14,54 @@ namespace QuizGame
 {
     public class EditMapPanelUI : MonoBehaviour
     {
-        [Header("--- 1. BẢNG CHÍNH (MAIN PANEL) ---")]
+        [Header("--- 1. BẢNG CHÍNH (TAB 1: MAIN PANEL) ---")]
         [Tooltip("Bảng chính của EditMapPanel (MainPanel: hiển thị đầu tiên khi bấm Edit trên thẻ map)")]
         [FormerlySerializedAs("otherArea")]
         [SerializeField] private GameObject mainPanelArea;
 
-        [Tooltip("Nút chuyển từ MainPanel sang tạo câu hỏi (CreateBtn trong MainPanel)")]
-        [SerializeField] private Button mainCreateBtn;
-
-        [Tooltip("Nút chuyển từ MainPanel sang danh sách câu hỏi (ListBtn trong MainPanel)")]
-        [SerializeField] private Button mainListBtn;
+        [Tooltip("Ô nhập tên màn chơi (NameMap)")]
+        [SerializeField] private TMP_InputField nameLevelInput;
 
         [Tooltip("Ô nhập số lượng trạm đến đỉnh núi (NumberStations)")]
         [SerializeField] private TMP_InputField numberStationsInput;
 
-        [Tooltip("Ô nhập tên màn chơi (NameLevel)")]
-        [SerializeField] private TMP_InputField nameLevelInput;
-
-        [Tooltip("Nút chọn Theme cho bản đồ (ThemeBtn trong Other/MainPanel)")]
+        [Tooltip("Nút chọn Theme cho bản đồ (ThemeBtn trong MainPanel/Theme)")]
         [SerializeField] private Button themeBtn;
 
-        [Tooltip("Text hiển thị tên Theme trên nút ThemeBtn")]
+        [Tooltip("Text hiển thị tên Theme (Map/Title/Text (TMP))")]
         [SerializeField] private TMP_Text themeNameText;
+
+        [Tooltip("Ảnh hiển thị theme bản đồ (Map/Mask/Image hoặc MapImg)")]
+        [FormerlySerializedAs("mapThemeImage")]
+        [SerializeField] private Image mapImg;
 
         [Tooltip("Danh sách ThemeSO tùy chọn cấu hình trong game")]
         [SerializeField] private List<ThemeSO> availableThemes = new List<ThemeSO>();
 
-        [Header("--- 2. KHU VỰC TẠO & SỬA CÂU HỎI (CREATE QUESTION) ---")]
-        [Tooltip("Khu vực nhập câu hỏi & đáp án (CreateQuestion)")]
+        [Header("--- 2. THANH TAB DỌC (MENU TAB PANEL) ---")]
+        [Tooltip("Bảng chứa 3 nút chuyển Tab dọc (MenuTabPanel)")]
+        [SerializeField] private GameObject menuTabPanel;
+
+        [Tooltip("Nút chuyển sang tab MainPanel (MainBtn trong MenuTabPanel)")]
+        [SerializeField] private Button tabMainBtn;
+
+        [Tooltip("Nút chuyển sang tab Tạo câu hỏi (CreateBtn trong MenuTabPanel)")]
+        [SerializeField] private Button tabCreateBtn;
+
+        [Tooltip("Nút chuyển sang tab Danh sách câu hỏi (ListBtn trong MenuTabPanel)")]
+        [SerializeField] private Button tabListBtn;
+
+        [Header("--- 3. KHU VỰC TẠO & SỬA CÂU HỎI (TAB 2: CREATE QUESTION PANEL) ---")]
+        [Tooltip("Khu vực nhập câu hỏi & đáp án (CreateQuestionPanel)")]
         [SerializeField] private GameObject createQuestionArea;
 
-        [Header("--- 3. KHU VỰC DANH SÁCH CÂU HỎI (LIST QUESTIONS) ---")]
-        [Tooltip("Khu vực danh sách các câu hỏi (ListQuestions)")]
-        [SerializeField] private GameObject listQuestionsArea;
-
-        [Header("--- NÚT CHUYỂN ĐỔI CHẾ ĐỘ PHỤ ---")]
-        [Tooltip("Nút chuyển sang xem danh sách câu hỏi")]
-        [SerializeField] private Button viewListBtn;
-
-        [Tooltip("Nút chuyển sang chế độ tạo câu hỏi mới")]
-        [SerializeField] private Button addNewBtn;
-
-        [Header("--- Ô NHẬP CÂU HỎI & ĐÁP ÁN ---")]
         [Tooltip("Ô nhập nội dung câu hỏi")]
         [SerializeField] private TMP_InputField questionInput;
 
-        [Tooltip("Ô nhập đáp án A (1)")]
+        [Tooltip("Ô nhập thời gian làm câu hỏi (giây), mặc định 30s")]
+        [SerializeField] private TMP_InputField timeInput;
+
+        [Tooltip("Ô nhập đáp án A (1) - LUÔN LÀ ĐÁP ÁN ĐÚNG")]
         [SerializeField] private TMP_InputField answerA;
 
         [Tooltip("Ô nhập đáp án B (2)")]
@@ -71,30 +73,13 @@ namespace QuizGame
         [Tooltip("Ô nhập đáp án D (4)")]
         [SerializeField] private TMP_InputField answerD;
 
-        [Header("--- CHỌN ĐÁP ÁN ĐÚNG (4 TOGGLES) ---")]
-        [Tooltip("Toggle chọn đáp án A là đáp án đúng")]
-        [SerializeField] private Toggle toggleA;
-
-        [Tooltip("Toggle chọn đáp án B là đáp án đúng")]
-        [SerializeField] private Toggle toggleB;
-
-        [Tooltip("Toggle chọn đáp án C là đáp án đúng")]
-        [SerializeField] private Toggle toggleC;
-
-        [Tooltip("Toggle chọn đáp án D là đáp án đúng")]
-        [SerializeField] private Toggle toggleD;
-
-        [Tooltip("Dropdown chọn đáp án đúng (tùy chọn hoặc dự phòng)")]
-        [SerializeField] private TMP_Dropdown correctDropdown;
-
-        [Header("--- NÚT HÀNH ĐỘNG TẠO & LÀM MỚI ---")]
-        [Tooltip("Nút tạo mới hoặc lưu chỉnh sửa câu hỏi")]
+        [Tooltip("Nút tạo mới hoặc lưu chỉnh sửa câu hỏi (CreateBtn trong Tab 2)")]
         [SerializeField] private Button createBtn;
 
-        [Tooltip("Nút xóa trắng các ô nhập để viết câu mới")]
+        [Tooltip("Nút xóa trắng các ô nhập để viết câu mới (ResetBtn trong Tab 2)")]
         [SerializeField] private Button resetBtn;
 
-        [Header("--- NHẬP CÂU HỎI TỪ FILE (IMPORT) ---")]
+        [Header("--- TÍNH NĂNG IMPORT TRONG TAB 2 ---")]
         [Tooltip("Khu vực chứa tính năng Import")]
         [SerializeField] private GameObject importArea;
 
@@ -113,14 +98,19 @@ namespace QuizGame
         [Tooltip("Nút đóng bảng hướng dẫn (CloseBtn)")]
         [SerializeField] private Button closeGuideBtn;
 
-        [Header("--- DANH SÁCH CÂU HỎI ---")]
+        [Tooltip("Nút copy nội dung hướng dẫn (DEFAULT_IMPORT_GUIDE) vào Clipboard")]
+        [SerializeField] private Button copyGuideBtn;
+
+        [Header("--- 4. KHU VỰC DANH SÁCH CÂU HỎI (TAB 3: LIST QUESTIONS PANEL) ---")]
+        [Tooltip("Khu vực danh sách các câu hỏi (ListQuestionsPanel)")]
+        [SerializeField] private GameObject listQuestionsArea;
+
         [Tooltip("Vùng chứa danh sách câu hỏi trong Scroll View Viewport")]
         [SerializeField] private Transform listContent;
 
         [Tooltip("Prefab hiển thị một dòng câu hỏi (QuestionContent.prefab)")]
         [SerializeField] private GameObject questionPrefab;
 
-        [Header("--- NÚT THAO TÁC CÂU HỎI TRONG DANH SÁCH ---")]
         [Tooltip("Nút mở form chỉnh sửa câu hỏi đã chọn trong danh sách (EditQuestBtn)")]
         [SerializeField] private Button editQuestBtn;
 
@@ -128,7 +118,8 @@ namespace QuizGame
         [SerializeField] private Button deleteBtn;
 
 
-        [Header("--- ĐIỀU HƯỚNG ---")]
+
+        [Header("--- 5. ĐIỀU HƯỚNG CHUNG ---")]
         [Tooltip("Nút đóng bảng soạn câu hỏi và quay về Map Manager")]
         [SerializeField] private Button backBtn;
 
@@ -142,24 +133,21 @@ namespace QuizGame
 
         private const string DEFAULT_IMPORT_GUIDE =
             "<b>HƯỚNG DẪN SOẠN FILE CÂU HỎI ĐỂ IMPORT</b>\n\n" +
-            "<b>1. File văn bản (.TXT) — Đánh dấu sao (*) đáp án đúng:</b>\n" +
+            "<b>1. File văn bản (.TXT) — Đánh dấu sao (*) đáp án đúng & cài thời gian:</b>\n" +
             "Soạn trên Word hoặc Notepad, mỗi câu cách nhau 1 dòng trống. <b>Chỉ cần thêm dấu * trước đáp án đúng</b> (không cần đổi thứ tự câu hỏi hay ghi thêm dòng đáp án!):\n\n" +
-            "<i>Câu 1: Thủ đô của Việt Nam là gì?\n" +
-            "A. TP. Hồ Chí Minh\n" +
-            "<b>*B. Hà Nội</b>\n" +
-            "C. Đà Nẵng\n" +
-            "D. Huế</i>\n\n" +
-            "<color=#FFE600><b>💡 ĐẶC BIỆT TIỆN LỢI:</b></color>\n" +
-            "• Thêm dấu <b>*</b> vào đáp án đúng ở bất kỳ đâu: <i>*A.</i>, <i>*B.</i>, <i>*C.</i>, hoặc <i>*D.</i> (dấu * sẽ tự biến mất khi vào game).\n" +
-            "• Nếu câu nào <b>không có dấu *</b>, hệ thống sẽ tự động lấy đáp án đầu tiên (A) là đúng.\n" +
-            "• Khi vào màn chơi, game sẽ <b>tự động xáo trộn ngẫu nhiên</b> các đáp án nên không bao giờ lo bị lộ vị trí!\n\n" +
+            "<i>  Câu 1: Đỉnh núi Fansipan cao bao nhiêu mét?\n" +
+            "<b>  Time: 45s</b>\n" +
+            "<b>*  A. 3.143m</b>\n" +
+            "  B. 2.800m\n" +
+            "  C. 3.000m\n" +
+            "  D. 3.500m</i>\n\n" +
             "<b>2. File Excel (.CSV):</b>\n" +
-            "Soạn theo cột: <i>Câu hỏi, Đáp án A, Đáp án B, Đáp án C, Đáp án D</i> (thêm dấu * vào ô đáp án đúng, ví dụ: <i>*Hà Nội</i>).";
+            "Soạn theo cột: <i>Câu hỏi, Đáp án A, Đáp án B, Đáp án C, Đáp án D, Đáp án đúng, Thời gian(s)</i>.\n" +
+            "Ví dụ: <i>\"Thủ đô của Việt Nam là gì?\", \"Hà Nội*\", \"Huế\", \"Đà Nẵng\", \"TP.HCM\", \"A\", \"15\"</i> (cột thời gian nếu để trống sẽ tự động lấy mặc định 30s).";
 
         private void Awake()
         {
             AutoFindReferences();
-            SetupCorrectDropdown();
             SetupGuideContent();
             BindEvents();
         }
@@ -168,6 +156,9 @@ namespace QuizGame
         private void OnValidate()
         {
             AutoFindReferences();
+            EnsureThemesLoaded();
+            UpdateThemeBtnUI();
+            UpdateTabVisuals(0);
         }
 #endif
 
@@ -179,20 +170,7 @@ namespace QuizGame
             }
         }
 
-        private void SetupCorrectDropdown()
-        {
-            if (correctDropdown != null)
-            {
-                correctDropdown.ClearOptions();
-                correctDropdown.AddOptions(new List<string>
-                {
-                    "Đáp án A (D1) là Đúng",
-                    "Đáp án B (D2) là Đúng",
-                    "Đáp án C (D3) là Đúng",
-                    "Đáp án D (D4) là Đúng"
-                });
-            }
-        }
+
 
         private void AutoFindReferences()
         {
@@ -205,8 +183,27 @@ namespace QuizGame
 
             // Tìm các thành phần trong MainPanel
             Transform mainRoot = mainPanelArea != null ? mainPanelArea.transform : transform;
-            if (mainCreateBtn == null) mainCreateBtn = FindButtonFlexible(mainRoot, "CreateBtn", "CreateQuestionBtn", "NewQuestionBtn", "Create");
-            if (mainListBtn == null) mainListBtn = FindButtonFlexible(mainRoot, "ListBtn", "ListQuestionsBtn", "ViewListBtn", "List");
+
+            // Tìm MenuTabPanel và 3 nút tab dọc (MainBtn, CreateBtn, ListBtn)
+            if (menuTabPanel == null)
+            {
+                Transform t = FindChildTransform(transform, "MenuTabPanel", "TabPanel", "SideTabPanel", "MenuPanel");
+                if (t != null) menuTabPanel = t.gameObject;
+            }
+
+            Transform tabRoot = menuTabPanel != null ? menuTabPanel.transform : transform;
+            if (tabMainBtn == null)
+            {
+                tabMainBtn = FindButtonFlexible(tabRoot, "MainBtn", "TabMainBtn", "MainTabBtn", "MainButton");
+            }
+            if (tabCreateBtn == null)
+            {
+                tabCreateBtn = FindButtonFlexible(tabRoot, "CreateBtn", "TabCreateBtn", "CreateTabBtn", "CreateButton");
+            }
+            if (tabListBtn == null)
+            {
+                tabListBtn = FindButtonFlexible(tabRoot, "ListBtn", "TabListBtn", "ListTabBtn", "ListButton");
+            }
 
             if (numberStationsInput == null)
             {
@@ -220,34 +217,103 @@ namespace QuizGame
 
             if (nameLevelInput == null)
             {
-                nameLevelInput = FindInputFieldFlexible(mainRoot, "NameLevel/InputField (TMP)", "NameLevel", "LevelName", "MapName");
+                nameLevelInput = FindInputFieldFlexible(mainRoot, "NameMap/InputField (TMP)", "NameMap", "NameLevel/InputField (TMP)", "NameLevel", "LevelName", "MapName");
                 if (nameLevelInput == null)
                 {
-                    Transform t = FindChildTransform(mainRoot, "NameLevel");
+                    Transform t = FindChildTransform(mainRoot, "NameMap", "NameLevel");
                     if (t != null) nameLevelInput = t.GetComponentInChildren<TMP_InputField>(true);
                 }
             }
 
+            // Tìm ThemeBtn, mapImg và themeNameText (Title/Text (TMP))
             if (themeBtn == null)
             {
-                themeBtn = FindButtonFlexible(mainRoot, "ThemeBtn", "SelectThemeBtn", "ThemeButton");
-            }
-            if (themeBtn != null && themeNameText == null)
-            {
-                themeNameText = themeBtn.GetComponentInChildren<TMP_Text>(true);
+                themeBtn = FindButtonFlexible(mainRoot, "Theme/ThemeBtn", "ThemeBtn", "SelectThemeBtn", "ThemeButton");
+                if (themeBtn == null)
+                {
+                    Transform t = FindTransformDeep(mainRoot, "ThemeBtn", "SelectThemeBtn");
+                    if (t != null) themeBtn = t.GetComponent<Button>() ?? t.GetComponentInChildren<Button>(true);
+                }
+                if (themeBtn == null)
+                {
+                    Transform themeGroup = FindTransformDeep(mainRoot, "Theme");
+                    if (themeGroup != null) themeBtn = themeGroup.GetComponentInChildren<Button>(true);
+                }
+                if (themeBtn == null)
+                {
+                    themeBtn = FindButtonFlexible(transform, "Theme/ThemeBtn", "ThemeBtn", "SelectThemeBtn");
+                }
             }
 
-            // 2. Tìm CreateQuestion
+            if (mapImg == null)
+            {
+                Transform imgT = FindTransformDeep(mainRoot,
+                    "Theme/Map/Mask/Image",
+                    "Map/Mask/Image",
+                    "Mask/Image",
+                    "MapImg",
+                    "MapImage",
+                    "ThemeImage");
+                if (imgT != null)
+                {
+                    mapImg = imgT.GetComponent<Image>();
+                }
+                if (mapImg == null)
+                {
+                    Transform mapTransform = FindTransformDeep(mainRoot, "Map", "Theme");
+                    if (mapTransform != null)
+                    {
+                        Transform maskT = FindTransformDeep(mapTransform, "Mask");
+                        if (maskT != null) mapImg = maskT.GetComponentInChildren<Image>(true);
+                        if (mapImg == null) mapImg = mapTransform.GetComponentInChildren<Image>(true);
+                    }
+                }
+                if (mapImg == null)
+                {
+                    imgT = FindTransformDeep(transform, "Theme/Map/Mask/Image", "Map/Mask/Image");
+                    if (imgT != null) mapImg = imgT.GetComponent<Image>();
+                }
+            }
+
+            if (themeNameText == null)
+            {
+                Transform titleT = FindTransformDeep(mainRoot,
+                    "Theme/Map/Title/Text (TMP)",
+                    "Map/Title/Text (TMP)",
+                    "Title/Text (TMP)",
+                    "Theme/Title/Text (TMP)",
+                    "Theme/Map/Title",
+                    "Map/Title",
+                    "Title");
+                if (titleT != null)
+                {
+                    themeNameText = titleT.GetComponent<TMP_Text>() ?? titleT.GetComponentInChildren<TMP_Text>(true);
+                }
+                if (themeNameText == null && themeBtn != null)
+                {
+                    themeNameText = themeBtn.GetComponentInChildren<TMP_Text>(true);
+                }
+                if (themeNameText == null)
+                {
+                    titleT = FindTransformDeep(transform, "Theme/Map/Title/Text (TMP)", "Map/Title/Text (TMP)");
+                    if (titleT != null)
+                    {
+                        themeNameText = titleT.GetComponent<TMP_Text>() ?? titleT.GetComponentInChildren<TMP_Text>(true);
+                    }
+                }
+            }
+
+            // 3. Tìm CreateQuestionPanel
             if (createQuestionArea == null)
             {
-                Transform t = FindChildTransform(transform, "CreateQuestion", "QuestionEditor", "CreateArea");
+                Transform t = FindChildTransform(transform, "CreateQuestionPanel", "CreateQuestion", "QuestionEditor", "CreateArea");
                 if (t != null) createQuestionArea = t.gameObject;
             }
 
-            // 3. Tìm ListQuestions
+            // 4. Tìm ListQuestionsPanel
             if (listQuestionsArea == null)
             {
-                Transform t = FindChildTransform(transform, "ListQuestions", "QuestionList");
+                Transform t = FindChildTransform(transform, "ListQuestionsPanel", "ListQuestions", "QuestionList");
                 if (t != null) listQuestionsArea = t.gameObject;
             }
 
@@ -261,45 +327,21 @@ namespace QuizGame
                     if (q != null) questionInput = q.GetComponent<TMP_InputField>();
                 }
 
+                if (timeInput == null)
+                {
+                    Transform t = FindChildTransform(createQ, "TimeInput", "TimerInput", "Time", "Duration", "QuestionTime", "TimeInputField");
+                    if (t != null) timeInput = t.GetComponent<TMP_InputField>();
+                }
+
                 if (answerA == null) answerA = FindInputFieldFlexible(createQ, "AnswerA", "Answer1", "OptionA", "Option1", "D1");
                 if (answerB == null) answerB = FindInputFieldFlexible(createQ, "AnswerB", "Answer2", "OptionB", "Option2", "D1 (1)", "D2");
                 if (answerC == null) answerC = FindInputFieldFlexible(createQ, "AnswerC", "Answer3", "OptionC", "Option3", "D1 (2)", "D3");
                 if (answerD == null) answerD = FindInputFieldFlexible(createQ, "AnswerD", "Answer4", "OptionD", "Option4", "D1 (3)", "D4");
 
-                // Tự động tìm 4 Toggle chọn đáp án đúng
-                if (toggleA == null) toggleA = FindToggleFlexible(createQ, "ToggleA", "Toggle1", "CorrectA", "Correct1", "Toggle_A");
-                if (toggleB == null) toggleB = FindToggleFlexible(createQ, "ToggleB", "Toggle2", "CorrectB", "Correct2", "Toggle_B");
-                if (toggleC == null) toggleC = FindToggleFlexible(createQ, "ToggleC", "Toggle3", "CorrectC", "Correct3", "Toggle_C");
-                if (toggleD == null) toggleD = FindToggleFlexible(createQ, "ToggleD", "Toggle4", "CorrectD", "Correct4", "Toggle_D");
 
-                // Nếu chưa tìm thấy theo tên, thử tìm bên trong các container đáp án D1, D2, D3, D4
-                if (toggleA == null && answerA != null && answerA.transform.parent != null) toggleA = answerA.transform.parent.GetComponentInChildren<Toggle>(true);
-                if (toggleB == null && answerB != null && answerB.transform.parent != null) toggleB = answerB.transform.parent.GetComponentInChildren<Toggle>(true);
-                if (toggleC == null && answerC != null && answerC.transform.parent != null) toggleC = answerC.transform.parent.GetComponentInChildren<Toggle>(true);
-                if (toggleD == null && answerD != null && answerD.transform.parent != null) toggleD = answerD.transform.parent.GetComponentInChildren<Toggle>(true);
-
-                // Nếu vẫn chưa có, lấy lần lượt 4 Toggle con bất kỳ trong createQ
-                if (toggleA == null || toggleB == null || toggleC == null || toggleD == null)
-                {
-                    Toggle[] allToggles = createQ.GetComponentsInChildren<Toggle>(true);
-                    if (allToggles.Length >= 4)
-                    {
-                        if (toggleA == null) toggleA = allToggles[0];
-                        if (toggleB == null) toggleB = allToggles[1];
-                        if (toggleC == null) toggleC = allToggles[2];
-                        if (toggleD == null) toggleD = allToggles[3];
-                    }
-                }
-
-                if (correctDropdown == null)
-                {
-                    Transform d = FindChildTransform(createQ, "CorrectDropdown", "CorrectSelect", "Dropdown", "CorrectAnswerDropdown");
-                    if (d != null) correctDropdown = d.GetComponent<TMP_Dropdown>();
-                }
 
                 if (createBtn == null) createBtn = FindButtonFlexible(createQ, "CreateBtn", "CreateQuestionButton", "CreateButton", "SaveBtn");
                 if (resetBtn == null) resetBtn = FindButtonFlexible(createQ, "ResetBtn", "ResetInputsButton", "ResetButton", "ClearBtn");
-                if (viewListBtn == null) viewListBtn = FindButtonFlexible(createQ, "ViewListBtn", "ListBtn", "ViewQuestionsBtn", "ShowListBtn");
 
                 // Tìm cụm Import
                 if (importArea == null)
@@ -323,6 +365,7 @@ namespace QuizGame
             {
                 Transform gRoot = guidePanel.transform;
                 if (closeGuideBtn == null) closeGuideBtn = FindButtonFlexible(gRoot, "CloseBtn", "CloseGuideBtn", "ExitBtn");
+                if (copyGuideBtn == null) copyGuideBtn = FindButtonFlexible(gRoot, "CopyGuideBtn", "CopyBtn", "CopyPromptBtn", "Copy");
                 if (guideText == null)
                 {
                     Transform t = FindChildTransform(gRoot, "Text (TMP)", "GuideText", "ContentText");
@@ -342,7 +385,6 @@ namespace QuizGame
 
                 if (editQuestBtn == null) editQuestBtn = FindButtonFlexible(listQ, "EditQuestBtn", "EditQuest", "EditBtn", "EditButton");
                 if (deleteBtn == null) deleteBtn = FindButtonFlexible(listQ, "DeleteQuest", "DeleteQuestBtn", "DeleteQuestionButton", "DeleteBtn");
-                if (addNewBtn == null) addNewBtn = FindButtonFlexible(listQ, "AddNewBtn", "CreateNewBtn", "AddBtn", "NewQuestionBtn");
             }
 
             // Dự phòng tìm kiếm trên toàn bảng nếu chưa thấy
@@ -351,6 +393,54 @@ namespace QuizGame
 
             // Tìm nút Back chung
             if (backBtn == null) backBtn = FindButtonFlexible(transform, "BackBtn", "BackButton", "CloseBtn", "CloseButton");
+        }
+
+        private Transform FindChildRecursive(Transform parent, string targetName)
+        {
+            if (parent == null || string.IsNullOrEmpty(targetName)) return null;
+            if (parent.name.Equals(targetName, StringComparison.OrdinalIgnoreCase)) return parent;
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                if (child.name.Equals(targetName, StringComparison.OrdinalIgnoreCase)) return child;
+                Transform found = FindChildRecursive(child, targetName);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private Transform FindTransformDeep(Transform parent, params string[] namesOrPaths)
+        {
+            if (parent == null || namesOrPaths == null) return null;
+            foreach (string np in namesOrPaths)
+            {
+                if (string.IsNullOrEmpty(np)) continue;
+
+                // 1. Tìm trực tiếp theo path (Find hỗ trợ A/B/C)
+                Transform direct = parent.Find(np);
+                if (direct != null) return direct;
+
+                // 2. Nếu không có dấu gạch chéo '/', tìm đệ quy theo tên GameObject
+                if (!np.Contains("/"))
+                {
+                    Transform rec = FindChildRecursive(parent, np);
+                    if (rec != null) return rec;
+                }
+                else
+                {
+                    // 3. Nếu là đường dẫn tương đối nhiều cấp lồng nhau nhưng bắt đầu từ một nút con nào đó
+                    string[] parts = np.Split('/');
+                    Transform firstPart = FindChildRecursive(parent, parts[0]);
+                    if (firstPart != null)
+                    {
+                        string remainingPath = string.Join("/", parts, 1, parts.Length - 1);
+                        Transform sub = firstPart.Find(remainingPath);
+                        if (sub != null) return sub;
+                    }
+                }
+            }
+            return null;
         }
 
         private Transform FindChildTransform(Transform parent, params string[] possibleNames)
@@ -384,39 +474,49 @@ namespace QuizGame
             return btn;
         }
 
-        private Toggle FindToggleFlexible(Transform parent, params string[] possibleNames)
-        {
-            Transform t = FindChildTransform(parent, possibleNames);
-            if (t == null) return null;
 
-            Toggle toggle = t.GetComponent<Toggle>();
-            if (toggle == null) toggle = t.GetComponentInChildren<Toggle>(true);
-            return toggle;
-        }
 
         private void BindEvents()
         {
-            // Gán sự kiện cho các nút trên MainPanel
-            if (mainCreateBtn != null)
+            // Gán sự kiện cho 3 nút Tab dọc trên MenuTabPanel
+            if (tabMainBtn != null)
             {
-                mainCreateBtn.onClick.RemoveAllListeners();
-                mainCreateBtn.onClick.AddListener(() =>
+                tabMainBtn.onClick.RemoveAllListeners();
+                tabMainBtn.onClick.AddListener(ShowMainPanelMode);
+            }
+
+            if (tabCreateBtn != null)
+            {
+                tabCreateBtn.onClick.RemoveAllListeners();
+                tabCreateBtn.onClick.AddListener(() =>
                 {
                     ClearInputs();
                     ShowCreateQuestionMode();
                 });
             }
 
-            if (mainListBtn != null)
+            if (tabListBtn != null)
             {
-                mainListBtn.onClick.RemoveAllListeners();
-                mainListBtn.onClick.AddListener(ShowListQuestionsMode);
+                tabListBtn.onClick.RemoveAllListeners();
+                tabListBtn.onClick.AddListener(ShowListQuestionsMode);
             }
 
             if (themeBtn != null)
             {
                 themeBtn.onClick.RemoveAllListeners();
                 themeBtn.onClick.AddListener(OnThemeButtonClicked);
+            }
+
+            // Gán sự kiện click nếu Map hoặc mapImg có Button
+            Button mapBtn = mapImg != null ? mapImg.GetComponent<Button>() : null;
+            if (mapBtn == null && mapImg != null && mapImg.transform.parent != null)
+            {
+                mapBtn = mapImg.transform.parent.GetComponentInParent<Button>();
+            }
+            if (mapBtn != null && mapBtn != themeBtn)
+            {
+                mapBtn.onClick.RemoveAllListeners();
+                mapBtn.onClick.AddListener(OnThemeButtonClicked);
             }
 
             if (createBtn != null)
@@ -466,16 +566,7 @@ namespace QuizGame
                 }
             }
 
-            if (viewListBtn != null)
-            {
-                viewListBtn.onClick.RemoveAllListeners();
-                viewListBtn.onClick.AddListener(ShowListQuestionsMode);
-            }
-            if (addNewBtn != null)
-            {
-                addNewBtn.onClick.RemoveAllListeners();
-                addNewBtn.onClick.AddListener(OnAddNewClicked);
-            }
+
 
             // Gán sự kiện Import & Hướng dẫn
             if (guideImportBtn != null)
@@ -488,20 +579,18 @@ namespace QuizGame
                 closeGuideBtn.onClick.RemoveAllListeners();
                 closeGuideBtn.onClick.AddListener(HideGuidePanel);
             }
+            if (copyGuideBtn != null)
+            {
+                copyGuideBtn.onClick.RemoveAllListeners();
+                copyGuideBtn.onClick.AddListener(OnCopyGuideClicked);
+            }
             if (importBtn != null)
             {
                 importBtn.onClick.RemoveAllListeners();
                 importBtn.onClick.AddListener(OnImportClicked);
             }
 
-            // Gán sự kiện thay phiên chọn cho 4 Toggle
-            BindToggleEvents();
 
-            if (correctDropdown != null)
-            {
-                correctDropdown.onValueChanged.RemoveAllListeners();
-                correctDropdown.onValueChanged.AddListener(val => SetCorrectAnswer(val));
-            }
 
             // Gán sự kiện thay đổi tên map và số lượng trạm
             if (nameLevelInput != null)
@@ -548,69 +637,42 @@ namespace QuizGame
             }
         }
 
-        private void BindToggleEvents()
-        {
-            UnbindToggleEvents();
-            if (toggleA != null) toggleA.onValueChanged.AddListener(isOn => { if (isOn) SetCorrectAnswer(0); else EnsureAtLeastOneToggleOn(0); });
-            if (toggleB != null) toggleB.onValueChanged.AddListener(isOn => { if (isOn) SetCorrectAnswer(1); else EnsureAtLeastOneToggleOn(1); });
-            if (toggleC != null) toggleC.onValueChanged.AddListener(isOn => { if (isOn) SetCorrectAnswer(2); else EnsureAtLeastOneToggleOn(2); });
-            if (toggleD != null) toggleD.onValueChanged.AddListener(isOn => { if (isOn) SetCorrectAnswer(3); else EnsureAtLeastOneToggleOn(3); });
-        }
-
-        private void UnbindToggleEvents()
-        {
-            if (toggleA != null) toggleA.onValueChanged.RemoveAllListeners();
-            if (toggleB != null) toggleB.onValueChanged.RemoveAllListeners();
-            if (toggleC != null) toggleC.onValueChanged.RemoveAllListeners();
-            if (toggleD != null) toggleD.onValueChanged.RemoveAllListeners();
-        }
-
-        private void EnsureAtLeastOneToggleOn(int turnedOffIndex)
-        {
-            if (GetCorrectAnswerIndex() == -1)
-            {
-                SetCorrectAnswer(turnedOffIndex);
-            }
-        }
-
         /// <summary>
-        /// Đặt toggle cho đáp án đúng (0: A, 1: B, 2: C, 3: D). Mặc định index = 0 (A) là correct và isOn = true
+        /// Bấm nút Copy: copy toàn bộ nội dung hướng dẫn mẫu DEFAULT_IMPORT_GUIDE vào Clipboard (đã lọc sạch thẻ HTML)
         /// </summary>
-        public void SetCorrectAnswer(int index)
+        public void OnCopyGuideClicked()
         {
-            index = Mathf.Clamp(index, 0, 3);
+            // Lọc bỏ các thẻ HTML RichText (<b>, <i>...) để khi dán vào AI/Notepad được văn bản sạch đẹp
+            string cleanText = System.Text.RegularExpressions.Regex.Replace(DEFAULT_IMPORT_GUIDE, "<.*?>", string.Empty);
+            GUIUtility.systemCopyBuffer = cleanText;
+            Debug.Log("[EditMapPanelUI] Đã copy nội dung DEFAULT_IMPORT_GUIDE vào Clipboard!");
 
-            UnbindToggleEvents();
+            StartCoroutine(CopyFeedbackRoutine());
+        }
 
-            if (toggleA != null) toggleA.isOn = (index == 0);
-            if (toggleB != null) toggleB.isOn = (index == 1);
-            if (toggleC != null) toggleC.isOn = (index == 2);
-            if (toggleD != null) toggleD.isOn = (index == 3);
-
-            BindToggleEvents();
-
-            if (correctDropdown != null && correctDropdown.value != index)
+        private System.Collections.IEnumerator CopyFeedbackRoutine()
+        {
+            if (copyGuideBtn == null) yield break;
+            TMP_Text btnText = copyGuideBtn.GetComponentInChildren<TMP_Text>(true);
+            if (btnText != null)
             {
-                correctDropdown.SetValueWithoutNotify(index);
+                string originalText = btnText.text;
+                btnText.text = "Copied!";
+                yield return new WaitForSeconds(1.5f);
+                btnText.text = originalText;
             }
         }
 
+
+
         /// <summary>
-        /// Lấy index của đáp án đúng hiện tại (0: A, 1: B, 2: C, 3: D). Mặc định là 0 nếu không có toggle nào bật
+        /// Lấy index của đáp án đúng hiện tại.
+        /// Quy ước: Đối với nhập liệu từ giao diện, ô A (index 0) luôn là đáp án đúng.
+        /// (Khi vào chơi game, hệ thống sẽ tự động xáo trộn ngẫu nhiên vị trí các đáp án)
         /// </summary>
         public int GetCorrectAnswerIndex()
         {
-            if (toggleA != null && toggleA.isOn) return 0;
-            if (toggleB != null && toggleB.isOn) return 1;
-            if (toggleC != null && toggleC.isOn) return 2;
-            if (toggleD != null && toggleD.isOn) return 3;
-
-            if (toggleA == null && toggleB == null && toggleC == null && toggleD == null)
-            {
-                if (correctDropdown != null) return correctDropdown.value;
-            }
-
-            return 0; // Mặc định đáp án A (index 0) là đúng
+            return 0; // Câu A luôn là đáp án đúng khi tạo từ form
         }
 
         /// <summary>
@@ -689,6 +751,28 @@ namespace QuizGame
             }
         }
 
+        private const float TAB_UNSELECTED_POS_X = 5f;
+        private const float TAB_SELECTED_POS_X = -23f;
+
+        private void SetTabButtonPosX(Button btn, float targetX)
+        {
+            if (btn == null) return;
+            RectTransform rt = btn.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                Vector2 pos = rt.anchoredPosition;
+                pos.x = targetX;
+                rt.anchoredPosition = pos;
+            }
+        }
+
+        public void UpdateTabVisuals(int activeTabIndex) // 0: Main, 1: Create, 2: List
+        {
+            SetTabButtonPosX(tabMainBtn, activeTabIndex == 0 ? TAB_SELECTED_POS_X : TAB_UNSELECTED_POS_X);
+            SetTabButtonPosX(tabCreateBtn, activeTabIndex == 1 ? TAB_SELECTED_POS_X : TAB_UNSELECTED_POS_X);
+            SetTabButtonPosX(tabListBtn, activeTabIndex == 2 ? TAB_SELECTED_POS_X : TAB_UNSELECTED_POS_X);
+        }
+
         /// <summary>
         /// Chế độ 0: Bật bảng chính (MainPanel), ẩn CreateQuestion và ListQuestions
         /// </summary>
@@ -698,6 +782,7 @@ namespace QuizGame
             if (createQuestionArea != null) createQuestionArea.SetActive(false);
             if (listQuestionsArea != null) listQuestionsArea.SetActive(false);
             HideGuidePanel();
+            UpdateTabVisuals(0);
 
             // Cập nhật dữ liệu hiển thị trên MainPanel
             if (currentMap != null)
@@ -717,26 +802,84 @@ namespace QuizGame
 
         private void UpdateThemeBtnUI()
         {
-            if (themeNameText != null && currentMap != null)
+            EnsureThemesLoaded();
+
+            ThemeSO matchedTheme = null;
+            if (availableThemes != null && availableThemes.Count > 0)
             {
-                string tName = GetThemeDisplayName(currentMap.themeId);
-                themeNameText.text = $"Theme: {tName}";
+                if (currentMap != null && !string.IsNullOrEmpty(currentMap.themeId))
+                {
+                    matchedTheme = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+                }
+
+                // Nếu themeId chưa có hoặc không khớp với ThemeSO nào, chọn ThemeSO đầu tiên
+                if (matchedTheme == null)
+                {
+                    matchedTheme = availableThemes[0];
+                    if (currentMap != null && (string.IsNullOrEmpty(currentMap.themeId) || currentMap.themeId == "default" || currentMap.themeId == "theme_forest"))
+                    {
+                        currentMap.themeId = matchedTheme.themeId;
+                    }
+                }
+            }
+
+            // 1. Text trong title là tên theme đó
+            if (themeNameText != null)
+            {
+                if (matchedTheme != null && !string.IsNullOrEmpty(matchedTheme.themeName))
+                {
+                    themeNameText.text = matchedTheme.themeName;
+                }
+                else if (currentMap != null)
+                {
+                    themeNameText.text = GetThemeDisplayName(currentMap.themeId);
+                }
+            }
+
+            // 2. mapimg thay đổi image trong map là ảnh ScriptableObject (mapBg)
+            if (mapImg != null)
+            {
+                if (matchedTheme != null && matchedTheme.mapBg != null)
+                {
+                    mapImg.sprite = matchedTheme.mapBg;
+                    mapImg.color = Color.white;
+                }
             }
         }
 
         private void EnsureThemesLoaded()
         {
-            if (availableThemes == null || availableThemes.Count == 0)
+            if (availableThemes == null)
             {
-#if UNITY_EDITOR
-                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
-                foreach (var g in guids)
+                availableThemes = new List<ThemeSO>();
+            }
+
+            if (availableThemes.Count == 0)
+            {
+                ThemeSO[] loaded = Resources.FindObjectsOfTypeAll<ThemeSO>();
+                if (loaded != null && loaded.Length > 0)
                 {
-                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
-                    ThemeSO tSO = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
-                    if (tSO != null && !availableThemes.Contains(tSO))
+                    foreach (var t in loaded)
                     {
-                        availableThemes.Add(tSO);
+                        if (t != null && !availableThemes.Contains(t))
+                        {
+                            availableThemes.Add(t);
+                        }
+                    }
+                }
+
+#if UNITY_EDITOR
+                if (availableThemes.Count == 0)
+                {
+                    string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
+                    foreach (var g in guids)
+                    {
+                        string path = UnityEditor.AssetDatabase.GUIDToAssetPath(g);
+                        ThemeSO tSO = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
+                        if (tSO != null && !availableThemes.Contains(tSO))
+                        {
+                            availableThemes.Add(tSO);
+                        }
                     }
                 }
 #endif
@@ -757,6 +900,7 @@ namespace QuizGame
                 case "theme_desert": return "Sa Mạc";
                 case "theme_ice": return "Băng Tuyết";
                 case "theme_volcano": return "Núi Lửa";
+                case "theme_mountain": return "Núi Tuyết";
                 case "theme_forest":
                 default: return "Rừng Xanh";
             }
@@ -764,32 +908,38 @@ namespace QuizGame
 
         private void OnThemeButtonClicked()
         {
-            if (currentMap == null) return;
             EnsureThemesLoaded();
 
             if (availableThemes != null && availableThemes.Count > 0)
             {
-                int curIdx = availableThemes.FindIndex(t => t != null && t.themeId == currentMap.themeId);
+                int curIdx = -1;
+                if (currentMap != null && !string.IsNullOrEmpty(currentMap.themeId))
+                {
+                    curIdx = availableThemes.FindIndex(t => t != null && t.themeId == currentMap.themeId);
+                }
                 int nextIdx = (curIdx + 1) % availableThemes.Count;
                 ThemeSO nextTheme = availableThemes[nextIdx];
 
                 if (nextTheme != null)
                 {
-                    currentMap.themeId = nextTheme.themeId;
-                    currentMap.itemIds = new List<string>();
-                    if (nextTheme.themeItems != null)
+                    if (currentMap != null)
                     {
-                        foreach (var itm in nextTheme.themeItems)
+                        currentMap.themeId = nextTheme.themeId;
+                        currentMap.itemIds = new List<string>();
+                        if (nextTheme.themeItems != null)
                         {
-                            if (itm != null)
+                            foreach (var itm in nextTheme.themeItems)
                             {
-                                currentMap.itemIds.Add(string.IsNullOrEmpty(itm.itemId) ? itm.name : itm.itemId);
+                                if (itm != null)
+                                {
+                                    currentMap.itemIds.Add(string.IsNullOrEmpty(itm.itemId) ? itm.name : itm.itemId);
+                                }
                             }
                         }
                     }
                 }
             }
-            else
+            else if (currentMap != null)
             {
                 // Fallback nếu chưa tạo file ThemeSO nào
                 if (currentMap.themeId == "theme_forest")
@@ -816,7 +966,10 @@ namespace QuizGame
 
             UpdateThemeBtnUI();
             onDataChangedCallback?.Invoke();
-            Debug.Log($"[EditMapPanelUI] Đã chọn Theme: {GetThemeDisplayName(currentMap.themeId)} ({currentMap.themeId})");
+            if (currentMap != null)
+            {
+                Debug.Log($"[EditMapPanelUI] Đã chọn Theme: {GetThemeDisplayName(currentMap.themeId)} ({currentMap.themeId})");
+            }
         }
 
         /// <summary>
@@ -827,6 +980,7 @@ namespace QuizGame
             if (mainPanelArea != null) mainPanelArea.SetActive(false);
             if (createQuestionArea != null) createQuestionArea.SetActive(true);
             if (listQuestionsArea != null) listQuestionsArea.SetActive(false);
+            UpdateTabVisuals(1);
         }
 
         /// <summary>
@@ -837,6 +991,7 @@ namespace QuizGame
             if (mainPanelArea != null) mainPanelArea.SetActive(false);
             if (createQuestionArea != null) createQuestionArea.SetActive(false);
             if (listQuestionsArea != null) listQuestionsArea.SetActive(true);
+            UpdateTabVisuals(2);
             RefreshListUI();
         }
 
@@ -922,27 +1077,45 @@ namespace QuizGame
             // Nạp dữ liệu vào ô input
             editingQuestion = selectedQuestion;
             if (questionInput != null) questionInput.text = editingQuestion.questionText;
-            if (answerA != null) answerA.text = editingQuestion.option1;
-            if (answerB != null) answerB.text = editingQuestion.option2;
-            if (answerC != null) answerC.text = editingQuestion.option3;
-            if (answerD != null) answerD.text = editingQuestion.option4;
 
-            // Nạp đáp án đúng vào Toggle (hoặc Dropdown)
-            SetCorrectAnswer(editingQuestion.correctIndex);
+            string optA = editingQuestion.option1;
+            string optB = editingQuestion.option2;
+            string optC = editingQuestion.option3;
+            string optD = editingQuestion.option4;
+
+            // Nếu câu hỏi ban đầu có đáp án đúng không phải A (ví dụ import từ file có * ở B/C/D),
+            // hoán đổi để đáp án đúng luôn được đưa về ô A, đảm bảo đúng quy ước "ô A luôn là đáp án đúng"
+            if (editingQuestion.correctIndex == 1)
+            {
+                string temp = optA;
+                optA = optB;
+                optB = temp;
+            }
+            else if (editingQuestion.correctIndex == 2)
+            {
+                string temp = optA;
+                optA = optC;
+                optC = temp;
+            }
+            else if (editingQuestion.correctIndex == 3)
+            {
+                string temp = optA;
+                optA = optD;
+                optD = temp;
+            }
+
+            if (answerA != null) answerA.text = optA;
+            if (answerB != null) answerB.text = optB;
+            if (answerC != null) answerC.text = optC;
+            if (answerD != null) answerD.text = optD;
+            if (timeInput != null) timeInput.text = (editingQuestion.timeLimit > 0f ? editingQuestion.timeLimit : 30f).ToString("0");
 
             // Mở bảng CreateQuestion để chỉnh sửa
             ShowCreateQuestionMode();
-            Debug.Log($"[EditMapPanelUI] Bấm nút Sửa: mở form chỉnh sửa câu hỏi '{editingQuestion.questionText}' (Đáp án đúng: {(char)('A' + editingQuestion.correctIndex)})!");
+            Debug.Log($"[EditMapPanelUI] Bấm nút Sửa: mở form chỉnh sửa câu hỏi '{editingQuestion.questionText}' (Đáp án đúng đặt tại ô A)!");
         }
 
-        /// <summary>
-        /// Bấm nút AddNewBtn: Xóa trắng form và mở CreateQuestion để tạo câu mới
-        /// </summary>
-        private void OnAddNewClicked()
-        {
-            ClearInputs();
-            ShowCreateQuestionMode();
-        }
+
 
         /// <summary>
         /// Bấm CreateBtn: Lưu câu hỏi mới hoặc cập nhật câu hỏi đang sửa
@@ -955,34 +1128,55 @@ namespace QuizGame
             string opt3 = answerC != null ? answerC.text.Trim() : "";
             string opt4 = answerD != null ? answerD.text.Trim() : "";
 
-            int correctIdx = GetCorrectAnswerIndex();
+            int correctIdx = 0; // Quy ước: Câu A luôn là đáp án đúng khi tạo từ form
 
             if (string.IsNullOrEmpty(qText))
             {
                 qText = "Câu hỏi mới";
             }
 
-            if (editingQuestion != null)
+            float qTime = 30f;
+            if (timeInput != null && !string.IsNullOrWhiteSpace(timeInput.text))
+            {
+                if (float.TryParse(timeInput.text.Trim(), out float parsed) && parsed > 0f)
+                {
+                    qTime = parsed;
+                }
+            }
+
+            bool wasEditing = (editingQuestion != null);
+
+            if (wasEditing)
             {
                 editingQuestion.questionText = qText;
                 editingQuestion.option1 = opt1;
                 editingQuestion.option2 = opt2;
                 editingQuestion.option3 = opt3;
                 editingQuestion.option4 = opt4;
-                editingQuestion.correctIndex = correctIdx;
-                Debug.Log($"[EditMapPanelUI] Đã cập nhật và lưu câu hỏi! (Đáp án đúng: {(char)('A' + correctIdx)})");
+                editingQuestion.correctIndex = 0; // Luôn là câu A đúng
+                editingQuestion.timeLimit = qTime;
+                Debug.Log($"[EditMapPanelUI] Đã cập nhật và lưu câu hỏi! (Thời gian: {qTime}s, Đáp án đúng: A)");
             }
             else
             {
-                QuestionData newQ = new QuestionData(qText, opt1, opt2, opt3, opt4, correctIdx);
+                QuestionData newQ = new QuestionData(qText, opt1, opt2, opt3, opt4, 0, qTime);
                 currentMap.questions.Add(newQ);
-                Debug.Log($"[EditMapPanelUI] Đã tạo câu hỏi mới (Đáp án đúng: {(char)('A' + correctIdx)}): '{qText}'");
+                Debug.Log($"[EditMapPanelUI] Đã tạo câu hỏi mới (Thời gian: {qTime}s, Đáp án đúng: A): '{qText}'");
             }
 
             SaveData();
             ClearInputs();
-            // Trở về danh sách câu hỏi để xem câu vừa tạo/sửa
-            ShowListQuestionsMode();
+
+            // Nếu là vừa sửa câu hỏi xong -> quay về Danh sách (Tab 3) để xem kết quả
+            // Nếu là tạo câu mới -> ở lại Tab 2 (Tạo câu hỏi) với các ô nhập đã được tự động xóa trắng để tiếp tục viết câu tiếp theo
+            if (wasEditing)
+            {
+                ShowListQuestionsMode();
+            }
+            else
+            {
+                ShowCreateQuestionMode();
+            }
         }
 
         private void OnResetClicked()
@@ -1025,9 +1219,7 @@ namespace QuizGame
             if (answerB != null) answerB.text = "";
             if (answerC != null) answerC.text = "";
             if (answerD != null) answerD.text = "";
-
-            // MẶC ĐỊNH ĐÁP ÁN ĐẦU TIÊN (A) LÀ CORRECT VÀ ISON = TRUE
-            SetCorrectAnswer(0);
+            if (timeInput != null) timeInput.text = "30";
 
             SetButtonState(editQuestBtn, false);
             SetButtonState(deleteBtn, false);
@@ -1156,9 +1348,19 @@ namespace QuizGame
                         c = c.Trim('*').Trim();
                         d = d.Trim('*').Trim();
 
+                        float timeLimit = 30f;
+                        if (parts.Length >= 7 && float.TryParse(parts[6].Trim().TrimEnd('s', 'S'), out float parsedT))
+                        {
+                            timeLimit = parsedT;
+                        }
+                        else if (parts.Length >= 6 && float.TryParse(parts[5].Trim().TrimEnd('s', 'S'), out float parsedT2))
+                        {
+                            timeLimit = parsedT2;
+                        }
+
                         if (!string.IsNullOrEmpty(q))
                         {
-                            list.Add(new QuestionData(q, a, b, c, d, correct));
+                            list.Add(new QuestionData(q, a, b, c, d, correct, timeLimit));
                         }
                     }
                 }
@@ -1172,12 +1374,22 @@ namespace QuizGame
                 string optC = "";
                 string optD = "";
                 int correctIdx = 0; // Mặc định đáp án A (đầu tiên) là đúng nếu không có dấu *
+                float currentTimeLimit = 30f;
 
                 Action commitQuestion = () =>
                 {
                     if (!string.IsNullOrEmpty(currentQuestion) && (!string.IsNullOrEmpty(optA) || !string.IsNullOrEmpty(optB)))
                     {
-                        list.Add(new QuestionData(currentQuestion.Trim(), optA.Trim(), optB.Trim(), optC.Trim(), optD.Trim(), correctIdx));
+                        // Kiểm tra nếu nội dung câu hỏi có kèm [15s] hoặc (15s)
+                        var match = System.Text.RegularExpressions.Regex.Match(currentQuestion, @"\[(\d+)s?\]|\((\d+)s\)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            string val = !string.IsNullOrEmpty(match.Groups[1].Value) ? match.Groups[1].Value : match.Groups[2].Value;
+                            if (float.TryParse(val, out float parsed)) currentTimeLimit = parsed;
+                            currentQuestion = currentQuestion.Replace(match.Value, "").Trim();
+                        }
+
+                        list.Add(new QuestionData(currentQuestion.Trim(), optA.Trim(), optB.Trim(), optC.Trim(), optD.Trim(), correctIdx, currentTimeLimit));
                     }
                     currentQuestion = "";
                     optA = "";
@@ -1185,6 +1397,7 @@ namespace QuizGame
                     optC = "";
                     optD = "";
                     correctIdx = 0; // Reset về mặc định
+                    currentTimeLimit = 30f;
                 };
 
                 foreach (string rawLine in rawLines)
@@ -1196,6 +1409,16 @@ namespace QuizGame
                         {
                             commitQuestion();
                         }
+                        continue;
+                    }
+
+                    // Kiểm tra dòng thời gian làm câu hỏi (Time: 15s, Thời gian: 15, Timer: 10...)
+                    if (line.StartsWith("Time:", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("Thời gian:", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("Timer:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string tStr = line.Substring(line.IndexOf(':') + 1).Trim().TrimEnd('s', 'S');
+                        if (float.TryParse(tStr, out float parsed) && parsed > 0f) currentTimeLimit = parsed;
                         continue;
                     }
 

@@ -19,6 +19,7 @@ namespace QuizGame
         public string option3;
         public string option4;
         public int correctIndex; // 0 = A, 1 = B, 2 = C, 3 = D
+        public float timeLimit = 30f; // Thời gian làm bài cho câu hỏi này (giây, mặc định 30s)
 
         public QuestionData()
         {
@@ -29,9 +30,10 @@ namespace QuizGame
             option3 = "";
             option4 = "";
             correctIndex = 0;
+            timeLimit = 30f;
         }
 
-        public QuestionData(string question, string opt1, string opt2, string opt3, string opt4, int correct = 0)
+        public QuestionData(string question, string opt1, string opt2, string opt3, string opt4, int correct = 0, float time = 30f)
         {
             id = Guid.NewGuid().ToString();
             questionText = question;
@@ -40,6 +42,7 @@ namespace QuizGame
             option3 = opt3;
             option4 = opt4;
             correctIndex = correct;
+            timeLimit = (time > 0f) ? time : 30f;
         }
     }
 

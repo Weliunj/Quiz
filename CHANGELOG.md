@@ -22,6 +22,133 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-17 17:52] — feat(ui): add configurable character limit and automatic TextMeshPro Ellipsis (...) overflow
+- **Tác vụ**:
+  - **Hỗ trợ hiển thị dấu ba chấm `...` khi văn bản dài quá giới hạn trên thẻ câu hỏi (`QuestionItemUI.cs`)**:
+    - Thêm 2 biến cấu hình Inspector: `maxQuestionLength` (số ký tự tối đa câu hỏi) và `maxAnswerLength` (số ký tự tối đa đáp án), tự động nối `...` khi vượt quá độ dài.
+    - Thêm cờ `autoEnableTmpEllipsis` (mặc định bật): tự động kích hoạt `overflowMode = TextOverflowModes.Ellipsis` trên component TextMeshPro để văn bản dài quá khung RectTransform tự động kết thúc bằng `...`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuestionItemUI.cs`
+- **Ảnh hưởng**: Thẻ câu hỏi trong danh sách hiển thị gọn gàng, không bị tràn viền hay đè lên các thành phần khác.
+
+### [2026-10-17 17:36] — refactor(edit-map): remove redundant list buttons (viewListBtn and addNewBtn)
+- **Tác vụ**:
+  - Xóa bỏ 2 nút điều hướng phụ thừa trong `EditMapPanelUI.cs`: `viewListBtn` và `addNewBtn`.
+  - Mọi thao tác chuyển tab Tạo câu hỏi và xem Danh sách nay đã được đảm nhiệm thống nhất bởi các nút tab dọc trong `MenuTabPanel`.
+  - Giúp Inspector và mã nguồn sạch sẽ, không còn các biến tham chiếu thừa.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Tab danh sách câu hỏi gọn gàng, chỉ tập trung vào 2 thao tác chính: Sửa (`editQuestBtn`) và Xóa (`deleteBtn`).
+
+### [2026-10-17 17:16] — refactor(edit-map): reorganize inspector fields by tabs and refine OnCreateClicked flow
+- **Tác vụ**:
+  - **Tái cơ cấu Inspector trong `EditMapPanelUI.cs`**:
+    - Sắp xếp toàn bộ các trường theo đúng thứ tự 3 Tab: Tab 1 (MainPanel), Tab 2 (CreateQuestionPanel chứa `createBtn`, `resetBtn`, các ô nhập và Import), Tab 3 (ListQuestionsPanel chứa danh sách, `editQuestBtn`, `deleteBtn`).
+  - **Tối ưu luồng bấm Tạo/Lưu (`OnCreateClicked`)**:
+    - Luôn lưu dữ liệu (`SaveData()`) và tự động xóa sạch các ô nhập (`ClearInputs()`).
+    - Nếu vừa chỉnh sửa một câu hỏi cũ (`wasEditing`): tự động quay về Tab 3 (Danh sách) để xem kết quả cập nhật.
+    - Nếu tạo câu hỏi mới: ở lại Tab 2 với form đã được làm mới sạch sẽ để sẵn sàng gõ tiếp câu tiếp theo mà không bị gián đoạn.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Giao diện Inspector chuẩn chỉ, trải nghiệm nhập liệu câu hỏi liên tục mượt mà.
+
+### [2026-10-17 17:02] — feat(edit-map): implement MenuTabPanel with 3 vertical tab buttons and Pos X shift
+- **Tác vụ**:
+  - **Sử dụng 3 nút tab dọc (`MainBtn`, `CreateBtn`, `ListBtn`) trong `MenuTabPanel` (`EditMapPanelUI.cs`)**:
+    - Thêm các trường tham chiếu: `menuTabPanel`, `tabMainBtn`, `tabCreateBtn`, `tabListBtn`.
+    - Bỏ 2 nút cũ trong `MainPanel` (`mainCreateBtn` và `mainListBtn`), loại bỏ khỏi Inspector.
+    - Cập nhật hàm `AutoFindReferences()` tự động tìm chính xác `MenuTabPanel`, các nút con `MainBtn`, `CreateBtn`, `ListBtn`, cũng như các panel `MainPanel`, `CreateQuestionPanel`, `ListQuestionsPanel`, và ô nhập `NameMap`.
+    - **Cơ chế đổi vị trí Pos X (RectTransform)**:
+      - Nút của tab đang được chọn (active): `anchoredPosition.x = -18f`.
+      - Nút của các tab không được chọn (inactive): `anchoredPosition.x = 13f`.
+      - Tự động đồng bộ vị trí các nút khi chuyển tab từ `MenuTabPanel`, khi mở form sửa câu hỏi, hoặc khi lưu xong câu hỏi.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Giao diện EditMapPanel điều hướng bằng 3 nút tab dọc hiện đại và trực quan với hiệu ứng đẩy nút ra vào theo Pos X.
+
+### [2026-10-17 16:27] — refactor(edit-map): completely remove toggle and dropdown variables and unused methods
+- **Tác vụ**:
+  - Dọn dẹp sạch sẽ toàn bộ các biến `toggleA`, `toggleB`, `toggleC`, `toggleD`, `correctDropdown` khỏi `EditMapPanelUI.cs`.
+  - Xóa bỏ các phương thức không còn dùng: `SetupCorrectDropdown`, `FindToggleFlexible`, `BindToggleEvents`, `UnbindToggleEvents`, `SetCorrectAnswer`, `HideTogglesIfAny`.
+  - Giúp mã nguồn tinh gọn và Inspector không còn hiển thị các trường Toggle dư thừa.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Giao diện Inspector của `EditMapPanelUI` gọn gàng, sạch sẽ, không còn phụ thuộc vào Toggle.
+
+### [2026-10-17 16:22] — feat(edit-map): eliminate toggle requirement in UI, Option A always correct, preserve * in file import
+- **Tác vụ**:
+  - **Bỏ toggle đúng/sai ở giao diện nhập câu hỏi (`EditMapPanelUI.cs`)**:
+    - Tự động ẩn các thành phần Toggle / Dropdown chọn đáp án đúng (`HideTogglesIfAny()`).
+    - Quy ước cố định khi tạo hoặc sửa câu hỏi từ form UI: **ô Đáp án A luôn là đáp án đúng** (`correctIndex = 0`).
+    - Khi bấm sửa một câu hỏi đã có: nếu câu hỏi ban đầu có đáp án đúng ở vị trí khác (B, C, D từ file import), hệ thống tự động hoán đổi nội dung để đưa đáp án đúng về ô A trên form, đảm bảo người dùng luôn thấy đáp án đúng nằm ở ô A.
+    - **Nhập từ file (.txt, .csv) giữ nguyên**: các câu hỏi trong file văn bản hoặc Excel có dấu `*` (ví dụ `*B.`, `*C.`) vẫn được bộ phân tích nhận diện chính xác đáp án đúng theo dấu `*`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Giao diện tạo/sửa câu hỏi gọn gàng, giáo viên chỉ cần nhập câu đúng vào ô A mà không cần click chọn toggle, game vẫn tự động xáo trộn ngẫu nhiên thứ tự các đáp án khi chơi.
+
+### [2026-10-17 16:01] — fix(edit-map): resolve CS0136 duplicate local variable scope error
+- **Tác vụ**:
+  - Tái sử dụng các biến cục bộ `imgT` và `titleT` trong `AutoFindReferences()` thay vì khai báo lại trong khối con, khắc phục triệt để lỗi biên dịch `CS0136`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Script biên dịch sạch sẽ không còn lỗi trong Unity.
+
+### [2026-10-17 15:55] — feat(edit-map): update Theme button to set mapImg from ThemeSO mapBg and Title text to themeName
+- **Tác vụ**:
+  - **Sửa nút Theme trong EditMapPanelUI (`Assets/Scripts/EditMapPanelUI.cs`)**:
+    - Thêm trường `mapImg` (`Image`) đại diện cho `Map/Mask/Image` của Theme.
+    - Cập nhật hàm tìm kiếm sâu và tự động `FindTransformDeep` / `FindChildRecursive` để tự động dò ra các thành phần phân cấp con: `Theme/ThemeBtn`, `Theme/Map/Mask/Image`, `Theme/Map/Title/Text (TMP)` mà không bị lỗi `None` hoặc `Missing` trong Inspector.
+    - Trong `UpdateThemeBtnUI()`: gán `mapImg.sprite = matchedTheme.mapBg` (ảnh từ `ThemeSO`) và `themeNameText.text = matchedTheme.themeName` (tên theme hiển thị vào Text trong Title).
+    - Trong `OnThemeButtonClicked()`: xoay vòng chuyển đổi theme trong danh sách `availableThemes`, tự động cập nhật `currentMap.themeId`, `currentMap.itemIds` và làm mới giao diện ảnh/tên theme.
+    - Hỗ trợ bắt sự kiện click cho cả `themeBtn` và `Map`/`mapImg` nếu được cấu hình Button.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Giao diện EditMap hiển thị đúng hình ảnh núi và tên theme tương ứng của Theme ScriptableObject khi bấm nút Theme.
+
+### [2026-10-17 15:16] — feat(ui): bind dedicated TimeText component inside QuestionContent
+- **Tác vụ**:
+  - **Liên kết GameObject con `TimeText` trong thẻ câu hỏi (`QuestionItemUI.cs`)**:
+    - Thêm trường `timeText` (`TMP_Text`) vào `QuestionItemUI`.
+    - Tự động tìm GameObject con `TimeText` trong prefab `QuestionContent`.
+    - Khi hiển thị câu hỏi: gán trực tiếp số giây làm bài vào `timeText` (ví dụ: `30s`, `15s`, `45s`).
+    - Nếu thẻ không có `TimeText`, tự động fallback nối chuỗi thời gian vào cuối `correctText`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuestionItemUI.cs` (Lines 14-110)
+  - `CHANGELOG.md`
+
+### [2026-10-17 15:10] — feat(quiz): default 30s timer when time is omitted and update import guide text
+- **Tác vụ**:
+  - **Đặt thời gian mặc định là 30 giây khi câu hỏi/file không có thời gian (`QuizData.cs`, `EditMapPanelUI.cs`, `StationQuizController.cs`)**:
+    - Khi người dùng tạo câu hỏi mà không nhập thời gian hoặc file import không có thông tin thời gian, hệ thống tự động gán mặc định là **30s**.
+  - **Cập nhật nội dung bảng hướng dẫn Import (`guideText` / `DEFAULT_IMPORT_GUIDE`)**:
+    - Thêm mục hướng dẫn chi tiết cách ghi thời gian trong file `.txt` (`[15s]` hoặc `Time: 15s`) và file `.csv` (cột thứ 6/7).
+    - Nêu rõ quy tắc: nếu không ghi thời gian thì hệ thống sẽ tự động đặt 30 giây.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuizData.cs` (Lines 20-45)
+  - `Assets/Scripts/StationQuizController.cs` (Line 50)
+  - `Assets/Scripts/EditMapPanelUI.cs` (Lines 146-170, 970-985, 1030-1045, 1175-1235)
+  - `CHANGELOG.md`
+
+### [2026-10-17 15:05] — feat(quiz): individual question time limit (per-question timer)
+- **Tác vụ**:
+  - **Hỗ trợ thời gian làm bài riêng cho từng câu hỏi (`QuizData.cs`, `EditMapPanelUI.cs`, `QuestionItemUI.cs`, `StationQuizController.cs`)**:
+    - **Mô hình dữ liệu (`QuizData.cs`)**: Thêm trường `public float timeLimit = 20f;` vào `QuestionData` và cập nhật các constructor tương ứng.
+    - **Trình soạn thảo Map (`EditMapPanelUI.cs`)**:
+      - Thêm ô nhập `timeInput` để người dùng có thể nhập số giây mong muốn cho từng câu hỏi khi tạo mới hoặc sửa.
+      - Tự động nạp thời gian của câu hỏi khi bấm sửa (`OnEditQuestionItem`).
+      - Cập nhật bộ Import câu hỏi thông minh (`ParseQuestionsFromText`): hỗ trợ nhận diện thời gian từ file `.txt` (`Time: 15s`, `[15s]`, `Thời gian: 15`) và cột thứ 6/7 trong file `.csv`.
+    - **Thẻ hiển thị danh sách (`QuestionItemUI.cs`)**: Hiển thị nhãn thời gian `⏱ [time]s` trên thẻ câu hỏi để người dùng dễ theo dõi.
+    - **Hệ thống đếm giờ trả lời trạm (`StationQuizController.cs`)**:
+      - Trong `DisplayQuestion(q)`, tự động đọc `q.timeLimit` của câu hỏi hiện tại để đếm ngược (nếu không có thì dùng mặc định 20s).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/QuizData.cs` (Lines 19-45)
+  - `Assets/Scripts/EditMapPanelUI.cs` (Lines 59-65, 260-270, 924-930, 960-985, 1020-1030, 1150-1200)
+  - `Assets/Scripts/QuestionItemUI.cs` (Lines 90-100)
+  - `Assets/Scripts/StationQuizController.cs` (Lines 1125-1135)
+  - `CHANGELOG.md`
+- **Ảnh hưởng**:
+  - Người thiết kế map có thể thoải mái tạo câu hỏi khó với thời gian dài hơn (ví dụ 45s, 60s) hoặc câu hỏi phản xạ nhanh (10s, 15s) tùy ý.
+
 ### [2026-10-17 14:52] — fix(ui): assign item icon sprite directly to child ItemImg instead of root ItemBtn
 - **Tác vụ**:
   - **Khắc phục lỗi không nhìn thấy ảnh icon vật phẩm ở nút trạm (`StationQuizController.cs`)**:

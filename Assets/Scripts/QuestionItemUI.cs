@@ -14,11 +14,24 @@ namespace QuizGame
         [Tooltip("Text hiển thị đáp án đúng")]
         [SerializeField] private TMP_Text correctText;
 
+        [Tooltip("Text hiển thị thời gian làm bài của câu hỏi (TimeText)")]
+        [SerializeField] private TMP_Text timeText;
+
         [Tooltip("Đối tượng Selection hiển thị viền/nền khi câu hỏi được chọn")]
         [SerializeField] private GameObject highlight;
 
         [Tooltip("Nút bấm trên thẻ để chọn câu hỏi này")]
         [SerializeField] private Button selectBtn;
+
+        [Header("--- GIỚI HẠN HIỂN THỊ DẤU BA CHẤM (...) ---")]
+        [Tooltip("Số ký tự tối đa của câu hỏi trên thẻ trước khi cắt thành '...' (0 là không giới hạn bằng code, để TextMeshPro tự xử lý)")]
+        [SerializeField] private int maxQuestionLength = 0;
+
+        [Tooltip("Số ký tự tối đa của đáp án đúng trên thẻ trước khi cắt thành '...' (0 là không giới hạn bằng code, để TextMeshPro tự xử lý)")]
+        [SerializeField] private int maxAnswerLength = 0;
+
+        [Tooltip("Tự động bật chế độ Overflow = Ellipsis trên TextMeshPro để tự hiện '...' khi chữ dài quá khung")]
+        [SerializeField] private bool autoEnableTmpEllipsis = true;
 
         public QuestionData Data { get; private set; }
         private Action<QuestionData, QuestionItemUI> onClickCallback;
@@ -33,12 +46,25 @@ namespace QuizGame
             }
         }
 
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            AutoFindReferences();
+        }
+#endif
+
         private void AutoFindReferences()
         {
             if (questionText == null)
             {
                 Transform t = FindChild(transform, "NameQuestText", "QuestionTitleText", "QuestionText", "TitleText");
                 if (t != null) questionText = t.GetComponent<TMP_Text>();
+            }
+
+            if (timeText == null)
+            {
+                Transform t = FindChild(transform, "TimeText", "TimerText", "Time", "DurationText", "Duration");
+                if (t != null) timeText = t.GetComponent<TMP_Text>();
             }
 
             if (correctText == null)
@@ -65,6 +91,12 @@ namespace QuizGame
                 selectBtn = GetComponent<Button>();
                 if (selectBtn == null) selectBtn = gameObject.AddComponent<Button>();
             }
+
+            if (autoEnableTmpEllipsis)
+            {
+                if (questionText != null) questionText.overflowMode = TextOverflowModes.Ellipsis;
+                if (correctText != null) correctText.overflowMode = TextOverflowModes.Ellipsis;
+            }
         }
 
         private Transform FindChild(Transform parent, params string[] names)
@@ -82,9 +114,27 @@ namespace QuizGame
             Data = data;
             onClickCallback = onClick;
 
+            if (questionText == null || timeText == null || correctText == null)
+            {
+                AutoFindReferences();
+            }
+
             if (questionText != null)
             {
-                questionText.text = string.IsNullOrEmpty(data.questionText) ? "Câu hỏi chưa có nội dung" : data.questionText;
+                string qContent = string.IsNullOrEmpty(data.questionText) ? "Câu hỏi chưa có nội dung" : data.questionText;
+                if (maxQuestionLength > 0 && qContent.Length > maxQuestionLength)
+                {
+                    qContent = qContent.Substring(0, maxQuestionLength) + "...";
+                }
+                questionText.text = qContent;
+            }
+
+            float qTime = (data.timeLimit > 0f) ? data.timeLimit : 30f;
+
+            if (timeText != null)
+            {
+                timeText.text = $"{qTime:0}s";
+                timeText.gameObject.SetActive(true);
             }
 
             if (correctText != null)
@@ -92,7 +142,19 @@ namespace QuizGame
                 string[] opts = new string[] { data.option1, data.option2, data.option3, data.option4 };
                 int idx = Mathf.Clamp(data.correctIndex, 0, 3);
                 string correctAns = opts[idx];
-                correctText.text = $"Đáp án đúng: {(char)('A' + idx)}. {correctAns}";
+                if (maxAnswerLength > 0 && !string.IsNullOrEmpty(correctAns) && correctAns.Length > maxAnswerLength)
+                {
+                    correctAns = correctAns.Substring(0, maxAnswerLength) + "...";
+                }
+
+                if (timeText != null)
+                {
+                    correctText.text = $"Đáp án: {(char)('A' + idx)}. {correctAns}";
+                }
+                else
+                {
+                    correctText.text = $"Đáp án: {(char)('A' + idx)}. {correctAns} | <color=#FFD54F>⏱ {qTime:0}s</color>";
+                }
             }
 
             SetSelected(false);

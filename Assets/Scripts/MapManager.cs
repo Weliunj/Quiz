@@ -32,11 +32,18 @@ namespace QuizGame
         [Tooltip("Nút Start ở màn hình chính để vào chọn map")]
         [SerializeField] private Button startBtn;
 
+        [Tooltip("Nút Exit ở màn hình chính HomeMenuPanel để thoát game")]
+        [SerializeField] private Button exitBtn;
+
         [Tooltip("Nút Pause trên GamePanel để quay về chọn map")]
         [SerializeField] private Button pauseBtn;
 
         [Tooltip("Nút Climb trên GamePanel")]
         [SerializeField] private Button climbBtn;
+
+        [Tooltip("Độ mờ khi nút Climb bị vô hiệu hóa (CanvasGroup alpha, ví dụ 0.5)")]
+        [Range(0f, 1f)]
+        [SerializeField] private float disabledClimbAlpha = 0.5f;
 
         [Tooltip("Nút dấu '+' để tạo thêm map mới")]
         [SerializeField] private Button addMapBtn;
@@ -111,6 +118,12 @@ namespace QuizGame
                 else startBtn = homePanel.GetComponentInChildren<Button>(true);
             }
 
+            if (exitBtn == null && homePanel != null)
+            {
+                Transform t = FindChild(homePanel.transform, "ExitButton", "ExitBtn", "QuitButton", "QuitBtn", "CloseBtn");
+                if (t != null) exitBtn = t.GetComponent<Button>();
+            }
+
             if (mapPanel != null)
             {
                 if (levelContent == null)
@@ -171,6 +184,13 @@ namespace QuizGame
                 }
             }
 
+            if (mapPrefab == null)
+            {
+#if UNITY_EDITOR
+                mapPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/MapContent.prefab");
+#endif
+            }
+
             if (mountainManager == null)
             {
                 mountainManager = GetComponent<MountainStationManager>();
@@ -194,6 +214,12 @@ namespace QuizGame
         {
             if (startBtn != null)
                 startBtn.onClick.AddListener(OnStartButtonClicked);
+
+            if (exitBtn != null)
+            {
+                exitBtn.onClick.RemoveAllListeners();
+                exitBtn.onClick.AddListener(OnExitButtonClicked);
+            }
 
             if (addMapBtn != null)
                 addMapBtn.onClick.AddListener(OnAddMapButtonClicked);
@@ -245,6 +271,16 @@ namespace QuizGame
         public void OnBackButtonClicked()
         {
             ShowHomeMenu();
+        }
+
+        public void OnExitButtonClicked()
+        {
+            Debug.Log("[MapManager] Đã bấm ExitBtn: Thoát game!");
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         public void OpenEditMap(MapData map)
@@ -399,8 +435,7 @@ namespace QuizGame
 
             if (climbBtn != null)
             {
-                climbBtn.gameObject.SetActive(true);
-                climbBtn.interactable = true;
+                SetClimbButtonState(true);
             }
 
             if (stationQuiz != null)
@@ -458,8 +493,7 @@ namespace QuizGame
 
             if (climbBtn != null)
             {
-                climbBtn.gameObject.SetActive(true);
-                climbBtn.interactable = true;
+                SetClimbButtonState(true);
             }
 
             if (mountainManager != null)
@@ -498,13 +532,28 @@ namespace QuizGame
             Debug.Log("[MapManager] Đã bấm PauseBtn: Trở về MapManagerPanel thành công!");
         }
 
+        /// <summary>
+        /// Bật/tắt trạng thái nút Climb: điều khiển tương tác và độ mờ bằng CanvasGroup
+        /// </summary>
+        public void SetClimbButtonState(bool enabled)
+        {
+            if (climbBtn == null) return;
+
+            climbBtn.gameObject.SetActive(true);
+            climbBtn.interactable = enabled;
+
+            CanvasGroup cg = climbBtn.GetComponent<CanvasGroup>();
+            if (cg == null) cg = climbBtn.gameObject.AddComponent<CanvasGroup>();
+
+            cg.alpha = enabled ? 1f : disabledClimbAlpha;
+            cg.interactable = enabled;
+            cg.blocksRaycasts = enabled;
+        }
+
         private void HandleStationOpenStateChanged(bool isOpen)
         {
-            if (climbBtn != null)
-            {
-                // Khi trạm đang mở (StationPanel hoặc QuestPanel) -> Ẩn nút Climb để người chơi không thể vừa làm Quiz vừa leo núi
-                climbBtn.gameObject.SetActive(!isOpen);
-            }
+            // Khi trạm đang mở (StationPanel hoặc QuestPanel) -> làm mờ và khóa nút Climb bằng CanvasGroup
+            SetClimbButtonState(!isOpen);
         }
 
         public void OnClimbButtonClicked()
@@ -540,11 +589,8 @@ namespace QuizGame
                 stationQuiz.HideJoinPrompt();
             }
 
-            // 2. Khóa tạm thời nút Climb trong lúc đang leo
-            if (climbBtn != null)
-            {
-                climbBtn.interactable = false;
-            }
+            // 2. Khóa tạm thời nút Climb trong lúc đang leo (làm mờ bằng CanvasGroup)
+            SetClimbButtonState(false);
 
             // Kiểm tra xem lần leo này có xuất hiện thiên tai ở mốc giữa chặng (50%) hay không
             bool willTriggerDisaster = (naturalDisaster != null && naturalDisaster.RollDisasterChance());
@@ -554,10 +600,7 @@ namespace QuizGame
                 onComplete:     () =>
                 {
                     // Khi đã tới trạm tiếp theo an toàn -> Mở lại nút Climb
-                    if (climbBtn != null)
-                    {
-                        climbBtn.interactable = true;
-                    }
+                    SetClimbButtonState(true);
                 },
                 onNearComplete: () => CutSceneTransition.Open(),
                 onDepart:       () => CutSceneTransition.Close(),

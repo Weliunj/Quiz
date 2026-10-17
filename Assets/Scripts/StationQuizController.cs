@@ -26,6 +26,10 @@ namespace QuizGame
         [Tooltip("Nút Join để vào trạm (hiển thị khi vừa tới trạm)")]
         [SerializeField] private Button joinBtn;
 
+        [Tooltip("Độ mờ khi nút Join không khả dụng (CanvasGroup alpha, ví dụ 0.5)")]
+        [Range(0f, 1f)]
+        [SerializeField] private float disabledJoinAlpha = 0.5f;
+
         [Tooltip("Nút rời khỏi trạm (ExitBtn)")]
         [SerializeField] private Button exitBtn;
 
@@ -46,8 +50,8 @@ namespace QuizGame
         [SerializeField] private Button[] answerButtons = new Button[4];
 
         [Header("--- 4. THÔNG SỐ ĐẾM GIỜ & THỜI GIAN ---")]
-        [Tooltip("Thời gian làm bài cho mỗi câu hỏi (giây)")]
-        [SerializeField] private float questionTimeLimit = 20f;
+        [Tooltip("Thời gian làm bài cho mỗi câu hỏi (giây, mặc định 30s)")]
+        [SerializeField] private float questionTimeLimit = 30f;
 
         [Header("--- 5. UI ITEM INVENTORY (MAINPANEL) ---")]
         [Tooltip("Vùng chứa Item trong MainPanel (GamePanel/MainPanel/ItemContainer)")]
@@ -149,7 +153,7 @@ namespace QuizGame
 
                 if (questPanel == null)
                 {
-                    Transform t = FindChildRecursive(stationPanel.transform, "QuestPanel");
+                    Transform t = FindChildRecursive(stationPanel.transform, "QuestPanel", "QuestionPanel");
                     if (t != null) questPanel = t.gameObject;
                 }
 
@@ -186,14 +190,15 @@ namespace QuizGame
                     if (t != null) skipTimeBtn = t.GetComponent<Button>();
                 }
 
-                // Tìm 4 nút D1Btn, D1Btn (1), D1Btn (2), D1Btn (3)
+                // Tìm 4 nút đáp án (D1Btn..., Answer...)
                 if (answerButtons == null || answerButtons.Length != 4 || answerButtons[0] == null)
                 {
                     answerButtons = new Button[4];
                     string[] btnNames = new string[] { "D1Btn", "D1Btn (1)", "D1Btn (2)", "D1Btn (3)" };
+                    string[] altBtnNames = new string[] { "Answer", "Answer (1)", "Answer (2)", "Answer (3)" };
                     for (int i = 0; i < 4; i++)
                     {
-                        Transform t = FindChildRecursive(questPanel.transform, btnNames[i], $"AnswerBtn_{i + 1}", $"Option_{i + 1}");
+                        Transform t = FindChildRecursive(questPanel.transform, btnNames[i], altBtnNames[i], $"AnswerBtn_{i + 1}", $"Option_{i + 1}");
                         if (t != null) answerButtons[i] = t.GetComponent<Button>();
                     }
                 }
@@ -309,7 +314,7 @@ namespace QuizGame
             InitThemeInventory(map);
 
             HideAllStationPanels();
-            if (joinBtn != null) joinBtn.gameObject.SetActive(false);
+            if (joinBtn != null) SetJoinButtonState(false);
         }
 
         /// <summary>
@@ -714,28 +719,40 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Khi người chơi di chuyển đến trạm bất kỳ -> Hiển thị nút Join
+        /// Bật/tắt trạng thái nút Join: điều khiển tương tác và độ mờ bằng CanvasGroup
+        /// </summary>
+        public void SetJoinButtonState(bool enabled)
+        {
+            if (joinBtn == null) return;
+
+            joinBtn.gameObject.SetActive(true);
+            joinBtn.interactable = enabled;
+
+            CanvasGroup cg = joinBtn.GetComponent<CanvasGroup>();
+            if (cg == null) cg = joinBtn.gameObject.AddComponent<CanvasGroup>();
+
+            cg.alpha = enabled ? 1f : disabledJoinAlpha;
+            cg.interactable = enabled;
+            cg.blocksRaycasts = enabled;
+        }
+
+        /// <summary>
+        /// Khi người chơi di chuyển đến trạm bất kỳ -> Sáng nút Join (CanvasGroup alpha = 1)
         /// </summary>
         public void ShowJoinPrompt(int stationIndex)
         {
             AutoFindReferences();
             currentStationIndex = stationIndex;
 
-            if (joinBtn != null)
-            {
-                joinBtn.gameObject.SetActive(true);
-            }
+            SetJoinButtonState(true);
         }
 
         /// <summary>
-        /// Ẩn prompt nút Join khi rời khỏi trạm hoặc đang leo núi
+        /// Ẩn/làm mờ prompt nút Join khi rời khỏi trạm hoặc đang leo núi
         /// </summary>
         public void HideJoinPrompt()
         {
-            if (joinBtn != null)
-            {
-                joinBtn.gameObject.SetActive(false);
-            }
+            SetJoinButtonState(false);
         }
 
         /// <summary>
@@ -770,7 +787,7 @@ namespace QuizGame
                 return;
             }
 
-            if (joinBtn != null) joinBtn.gameObject.SetActive(false);
+            SetJoinButtonState(false);
 
             if (stationPanel != null)
             {
@@ -805,7 +822,7 @@ namespace QuizGame
             OnStationOpenStateChanged?.Invoke(false);
 
             // Cho phép hiển thị lại nút Join nếu người chơi vẫn ở trạm đó
-            if (joinBtn != null) joinBtn.gameObject.SetActive(true);
+            SetJoinButtonState(true);
         }
 
         /// <summary>
@@ -1125,14 +1142,19 @@ namespace QuizGame
                 }
             }
 
-            // Khởi động đếm ngược thời gian
-            currentTimeLeft = questionTimeLimit;
+            // Khởi động đếm ngược thời gian (dùng thời gian riêng của câu hỏi nếu có, fallback về questionTimeLimit)
+            float qTime = (q != null && q.timeLimit > 0f) ? q.timeLimit : questionTimeLimit;
+            currentTimeLeft = qTime;
+            if (timeText != null)
+            {
+                timeText.text = Mathf.CeilToInt(currentTimeLeft).ToString();
+            }
             if (timerCoroutine != null) StopCoroutine(timerCoroutine);
             timerCoroutine = StartCoroutine(CountdownRoutine());
         }
 
         private Color defaultButtonColor = Color.white;
-        private Color selectedHighlightColor = new Color(0.65f, 0.85f, 1f, 1f); // Màu xanh dương nhạt khi đang chọn
+        private Color selectedHighlightColor = new Color(0, 0.9f, 1f, 1f); // Màu xanh dương nhạt khi đang chọn
         private Color correctColor = new Color(0.2f, 0.85f, 0.3f, 1f);          // Màu xanh lá khi đúng
         private Color wrongColor = new Color(0.95f, 0.28f, 0.28f, 1f);          // Màu đỏ khi sai
         private int currentSelectedIndex = -1;

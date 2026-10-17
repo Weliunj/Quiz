@@ -50,48 +50,55 @@ namespace QuizGame
         {
             if (mapImg == null)
             {
-                Transform t = FindChild(transform, "MapImg", "MapImage", "BgImg", "Background", "Image");
+                Transform t = FindChildRecursive(transform, "MapImg", "MapImage", "BgImg", "Background");
                 if (t != null) mapImg = t.GetComponent<Image>();
                 if (mapImg == null) mapImg = GetComponentInChildren<Image>(true);
             }
 
             if (playBtn == null)
             {
-                Transform t = FindChild(transform, "PlayBtn", "PlayButton", "Play");
+                Transform t = FindChildRecursive(transform, "PlayBtn", "PlayButton", "Play");
                 if (t != null) playBtn = t.GetComponent<Button>();
             }
 
             if (editBtn == null)
             {
-                Transform t = FindChild(transform, "EditBtn", "EditButton", "Edit");
+                Transform t = FindChildRecursive(transform, "EditBtn", "EditButton", "Edit");
                 if (t != null) editBtn = t.GetComponent<Button>();
             }
 
             if (deleteBtn == null)
             {
-                Transform t = FindChild(transform, "DeleteBtn", "DeleteButton", "Delete", "DelBtn", "RemoveBtn");
+                Transform t = FindChildRecursive(transform, "DeleteBtn", "DeleteButton", "Delete", "DelBtn", "RemoveBtn");
                 if (t != null) deleteBtn = t.GetComponent<Button>();
             }
 
             if (titleText == null)
             {
-                Transform t = FindChild(transform, "TitleText", "MapTitleText", "MapTitle", "Title", "NameText");
+                Transform t = FindChildRecursive(transform, "TitleText", "MapTitleText", "MapTitle", "Title", "NameText");
                 if (t != null) titleText = t.GetComponent<TMP_Text>();
             }
 
             if (countText == null)
             {
-                Transform t = FindChild(transform, "CountText", "QuestionCountText", "QuestionCount");
+                Transform t = FindChildRecursive(transform, "CountText", "QuestionCountText", "QuestionCount");
                 if (t != null) countText = t.GetComponent<TMP_Text>();
             }
         }
 
-        private Transform FindChild(Transform parent, params string[] names)
+        private Transform FindChildRecursive(Transform parent, params string[] names)
         {
+            if (parent == null) return null;
             foreach (var n in names)
             {
                 Transform t = parent.Find(n);
                 if (t != null) return t;
+            }
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform found = FindChildRecursive(parent.GetChild(i), names);
+                if (found != null) return found;
             }
             return null;
         }

@@ -281,48 +281,50 @@ namespace QuizGame
 
             if (hpContainer == null) return;
 
-            // Xóa toàn bộ tim cũ nếu có
-            for (int i = hpContainer.childCount - 1; i >= 0; i--)
-            {
-                Destroy(hpContainer.GetChild(i).gameObject);
-            }
             _activeHearts.Clear();
 
-            // Đảm bảo có HorizontalLayoutGroup để 5 tim xếp ngang đẹp mắt
-            HorizontalLayoutGroup layout = hpContainer.GetComponent<HorizontalLayoutGroup>();
-            if (layout == null) layout = hpContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-            layout.spacing = 10f;
-
-            // Sinh 5 tim
-            for (int i = 0; i < maxHp; i++)
+            // Nếu trong hpContainer đã có sẵn các icon tim do bạn cài đặt chuẩn trong Editor -> sử dụng trực tiếp
+            if (hpContainer.childCount >= maxHp)
             {
-                GameObject heartObj = null;
-                if (hpPrefab != null)
+                for (int i = 0; i < hpContainer.childCount; i++)
                 {
-                    heartObj = Instantiate(hpPrefab, hpContainer);
+                    GameObject heartObj = hpContainer.GetChild(i).gameObject;
+                    bool shouldShow = (i < maxHp);
+                    heartObj.SetActive(shouldShow);
+                    if (shouldShow)
+                    {
+                        _activeHearts.Add(heartObj);
+                    }
                 }
-                else
+            }
+            else
+            {
+                // Nếu chưa có tim trong container thì mới dọn dẹp và sinh mới từ hpPrefab
+                for (int i = hpContainer.childCount - 1; i >= 0; i--)
                 {
-                    heartObj = new GameObject($"Hp_{i + 1}", typeof(RectTransform), typeof(Image));
-                    heartObj.transform.SetParent(hpContainer, false);
-                    Image img = heartObj.GetComponent<Image>();
-                    img.color = Color.red;
-                }
-
-                heartObj.name = $"Heart_{i + 1}";
-                RectTransform rt = heartObj.GetComponent<RectTransform>();
-                if (rt != null)
-                {
-                    rt.sizeDelta = new Vector2(48f, 48f); // Kích thước chuẩn vừa vặn
-                    rt.localScale = Vector3.one;
+                    Destroy(hpContainer.GetChild(i).gameObject);
                 }
 
-                _activeHearts.Add(heartObj);
+                // Sinh các tim
+                for (int i = 0; i < maxHp; i++)
+                {
+                    GameObject heartObj = null;
+                    if (hpPrefab != null)
+                    {
+                        heartObj = Instantiate(hpPrefab, hpContainer);
+                    }
+                    else
+                    {
+                        heartObj = new GameObject($"Heart_{i + 1}", typeof(RectTransform), typeof(Image));
+                        heartObj.transform.SetParent(hpContainer, false);
+                        Image img = heartObj.GetComponent<Image>();
+                        img.color = Color.red;
+                    }
+
+                    heartObj.name = $"Heart_{i + 1}";
+                    heartObj.SetActive(true);
+                    _activeHearts.Add(heartObj);
+                }
             }
 
             Debug.Log($"[NaturalDisasterController] Đã khởi tạo {maxHp} tim (HP) thành công!");
