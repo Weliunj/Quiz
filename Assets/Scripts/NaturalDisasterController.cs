@@ -39,6 +39,19 @@ namespace QuizGame
             [Tooltip("Danh sách các mã item khắc chế được thiên tai này (nếu có từ 2 item trở lên, người chơi chọn 1 trong các item này đều sẽ thành công và không bị trừ HP)")]
             public List<string> counterItemIds = new List<string>();
 
+            [Header("--- THÔNG ĐIỆP DIALOG CHO THIÊN TAI NÀY ---")]
+            [TextArea(2, 4)]
+            [Tooltip("Nội dung cảnh báo khi thiên tai xuất hiện (để trống sẽ dùng mặc định. Hỗ trợ thẻ {disaster})")]
+            public string warningMessage = "";
+
+            [TextArea(2, 4)]
+            [Tooltip("Nội dung khi đối phó THÀNH CÔNG (để trống sẽ dùng mặc định. Hỗ trợ thẻ {item}, {disaster}, {hp}, {maxhp})")]
+            public string successMessage = "";
+
+            [TextArea(2, 4)]
+            [Tooltip("Nội dung khi đối phó THẤT BẠI (để trống sẽ dùng mặc định. Hỗ trợ thẻ {item}, {disaster}, {hp}, {maxhp})")]
+            public string failureMessage = "";
+
             /// <summary>
             /// Lấy toàn bộ danh sách item khắc chế hợp lệ (kết hợp cả counterItemId và counterItemIds)
             /// </summary>
@@ -108,8 +121,8 @@ namespace QuizGame
         [Header("--- 4. THAM CHIẾU HỆ THỐNG ---")]
         [SerializeField] private StationQuizController stationQuiz;
 
-        [Header("--- 5. DIALOG HỘP THOẠI THIÊN TAI ---")]
-        [Tooltip("Panel hộp thoại thông báo thiên tai (trước & sau khi chọn item)")]
+        [Header("--- 5. DIALOG HỘP THOẠI THIÊN TAI (CHUNG / CẢNH BÁO) ---")]
+        [Tooltip("Panel hộp thoại thông báo thiên tai (trước & sau khi chọn item, dùng làm mặc định nếu không gán panel riêng)")]
         [SerializeField] private GameObject disasterDialogPanel;
 
         [Tooltip("Text tiêu đề hộp thoại (Warning / Result)")]
@@ -124,6 +137,7 @@ namespace QuizGame
         [Tooltip("Text của nút xác nhận")]
         [SerializeField] private TMP_Text dialogBtnText;
 
+        [Header("--- CẤU HÌNH HIỆU ỨNG GÕ CHỮ & THỜI GIAN ---")]
         [Tooltip("Tốc độ gõ chữ Typewriter (giây/ký tự, ví dụ 0.025s)")]
         [SerializeField] private float typewriterSpeed = 0.025f;
 
@@ -139,6 +153,8 @@ namespace QuizGame
         private Coroutine _autoCloseCoroutine;
         private bool _isTyping = false;
         private Action _pendingConfirmAction;
+        private GameObject _activeDialogPanel;
+        private TMP_Text _activeMessageText;
 
         public int CurrentHp => _currentHp;
         public int MaxHp => maxHp;
@@ -243,23 +259,22 @@ namespace QuizGame
             }
 #endif
 
-            // 5. Tìm hoặc tự động tạo Dialog Panel
+            // 5. Tìm các tham chiếu Dialog Panel
             SetupDialogReferences();
-
-            // 6. Cấu hình danh sách thiên tai mặc định nếu danh sách trống
-            SetupDefaultDisastersIfEmpty();
         }
 
         private void SetupDialogReferences()
         {
             Transform root = transform;
+            Canvas c = FindFirstObjectByType<Canvas>();
+
+            // 1. Setup disasterDialogPanel (Chung / Mặc định / Cảnh báo)
             if (disasterDialogPanel == null)
             {
                 Transform dPanel = FindChildRecursive(root, "DisasterDialogPanel");
-                if (dPanel == null)
+                if (dPanel == null && c != null)
                 {
-                    Canvas c = FindFirstObjectByType<Canvas>();
-                    if (c != null) dPanel = FindChildRecursive(c.transform, "DisasterDialogPanel");
+                    dPanel = FindChildRecursive(c.transform, "DisasterDialogPanel");
                 }
                 if (dPanel != null) disasterDialogPanel = dPanel.gameObject;
             }
@@ -286,145 +301,6 @@ namespace QuizGame
                     dialogBtnText = dialogConfirmBtn.GetComponentInChildren<TMP_Text>(true);
                 }
             }
-            else
-            {
-                CreateDynamicDialogPanel();
-            }
-        }
-
-        private void CreateDynamicDialogPanel()
-        {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
-
-            // 1. Tạo Backdrop phủ toàn màn hình (có Button để click bất cứ đâu cũng skip/tiếp tục)
-            GameObject panelObj = new GameObject("DisasterDialogPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            panelObj.transform.SetParent(canvas.transform, false);
-
-            RectTransform panelRT = panelObj.GetComponent<RectTransform>();
-            panelRT.anchorMin = Vector2.zero;
-            panelRT.anchorMax = Vector2.one;
-            panelRT.offsetMin = Vector2.zero;
-            panelRT.offsetMax = Vector2.zero;
-
-            Image panelImg = panelObj.GetComponent<Image>();
-            panelImg.color = new Color(0f, 0f, 0f, 0.75f); // Nền tối mờ ảo
-
-            // 2. Tạo Card Dialog ở giữa
-            GameObject cardObj = new GameObject("DialogCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            cardObj.transform.SetParent(panelObj.transform, false);
-
-            RectTransform cardRT = cardObj.GetComponent<RectTransform>();
-            cardRT.anchorMin = new Vector2(0.5f, 0.5f);
-            cardRT.anchorMax = new Vector2(0.5f, 0.5f);
-            cardRT.pivot = new Vector2(0.5f, 0.5f);
-            cardRT.sizeDelta = new Vector2(540f, 290f);
-            cardRT.anchoredPosition = Vector2.zero;
-
-            Image cardImg = cardObj.GetComponent<Image>();
-            cardImg.color = new Color(0.11f, 0.15f, 0.22f, 0.98f); // Màu xanh đêm navy
-
-            // 3. Tiêu đề (TitleText)
-            GameObject titleObj = new GameObject("TitleText", typeof(RectTransform), typeof(TextMeshProUGUI));
-            titleObj.transform.SetParent(cardObj.transform, false);
-            RectTransform titleRT = titleObj.GetComponent<RectTransform>();
-            titleRT.anchorMin = new Vector2(0f, 1f);
-            titleRT.anchorMax = new Vector2(1f, 1f);
-            titleRT.pivot = new Vector2(0.5f, 1f);
-            titleRT.anchoredPosition = new Vector2(0f, -18f);
-            titleRT.sizeDelta = new Vector2(-40f, 38f);
-
-            dialogTitleText = titleObj.GetComponent<TextMeshProUGUI>();
-            dialogTitleText.fontSize = 24;
-            dialogTitleText.fontStyle = FontStyles.Bold;
-            dialogTitleText.alignment = TextAlignmentOptions.Center;
-            dialogTitleText.color = new Color(1f, 0.85f, 0.3f, 1f);
-            dialogTitleText.text = "THÔNG BÁO THIÊN TAI";
-
-            // 4. Nội dung (MessageText)
-            GameObject msgObj = new GameObject("MessageText", typeof(RectTransform), typeof(TextMeshProUGUI));
-            msgObj.transform.SetParent(cardObj.transform, false);
-            RectTransform msgRT = msgObj.GetComponent<RectTransform>();
-            msgRT.anchorMin = new Vector2(0f, 0f);
-            msgRT.anchorMax = new Vector2(1f, 1f);
-            msgRT.pivot = new Vector2(0.5f, 0.5f);
-            msgRT.anchoredPosition = new Vector2(0f, 6f);
-            msgRT.sizeDelta = new Vector2(-50f, -130f);
-
-            dialogMessageText = msgObj.GetComponent<TextMeshProUGUI>();
-            dialogMessageText.fontSize = 17;
-            dialogMessageText.alignment = TextAlignmentOptions.Center;
-            dialogMessageText.color = new Color(0.92f, 0.94f, 0.98f, 1f);
-            dialogMessageText.textWrappingMode = TextWrappingModes.Normal;
-            dialogMessageText.text = "...";
-
-            // 5. Nút bấm xác nhận (ConfirmBtn)
-            GameObject btnObj = new GameObject("ConfirmBtn", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            btnObj.transform.SetParent(cardObj.transform, false);
-            RectTransform btnRT = btnObj.GetComponent<RectTransform>();
-            btnRT.anchorMin = new Vector2(0.5f, 0f);
-            btnRT.anchorMax = new Vector2(0.5f, 0f);
-            btnRT.pivot = new Vector2(0.5f, 0f);
-            btnRT.anchoredPosition = new Vector2(0f, 22f);
-            btnRT.sizeDelta = new Vector2(200f, 44f);
-
-            Image btnImg = btnObj.GetComponent<Image>();
-            btnImg.color = new Color(0.18f, 0.62f, 0.95f, 1f);
-
-            dialogConfirmBtn = btnObj.GetComponent<Button>();
-
-            // Text của nút bấm
-            GameObject btnTextObj = new GameObject("BtnText", typeof(RectTransform), typeof(TextMeshProUGUI));
-            btnTextObj.transform.SetParent(btnObj.transform, false);
-            RectTransform btnTextRT = btnTextObj.GetComponent<RectTransform>();
-            btnTextRT.anchorMin = Vector2.zero;
-            btnTextRT.anchorMax = Vector2.one;
-            btnTextRT.sizeDelta = Vector2.zero;
-
-            dialogBtnText = btnTextObj.GetComponent<TextMeshProUGUI>();
-            dialogBtnText.fontSize = 17;
-            dialogBtnText.fontStyle = FontStyles.Bold;
-            dialogBtnText.alignment = TextAlignmentOptions.Center;
-            dialogBtnText.color = Color.white;
-            dialogBtnText.text = "Tiếp Tục";
-
-            disasterDialogPanel = panelObj;
-            disasterDialogPanel.SetActive(false);
-        }
-
-        private void SetupDefaultDisastersIfEmpty()
-        {
-            if (disasterList == null) disasterList = new List<DisasterData>();
-            if (disasterList.Count > 0) return;
-
-            Sprite avalancheSprite = null;
-#if UNITY_EDITOR
-            avalancheSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprite/Avalanche.png");
-            if (avalancheSprite == null)
-            {
-                avalancheSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprite/Sleet.png");
-            }
-#endif
-
-            // Thiên tai 1: Sạt lở tuyết -> có thể giải quyết bằng 1 trong 2 item: Snow Anchor hoặc Tent
-            disasterList.Add(new DisasterData
-            {
-                disasterId = "avalanche",
-                disasterName = "Sạt Lở Tuyết",
-                disasterSprite = avalancheSprite,
-                counterItemId = "item_snowanchor1",
-                counterItemIds = new List<string> { "item_snowanchor1", "item_emergencytent1" }
-            });
-
-            // Thiên tai 2: Thú dữ tuyết / Đói rét -> dùng Meat
-            disasterList.Add(new DisasterData
-            {
-                disasterId = "wild_beast",
-                disasterName = "Thú Dữ Tuyết",
-                disasterSprite = avalancheSprite,
-                counterItemId = "item_meat1",
-                counterItemIds = new List<string> { "item_meat1" }
-            });
         }
 
         private Transform FindChildRecursive(Transform parent, params string[] names)
@@ -576,18 +452,93 @@ namespace QuizGame
         /// 4. Sinh các nút chọn item trong SelectItemContainer (CHỈ HIỂN THỊ ITEM CÓ SỐ LƯỢNG > 0).
         /// 5. Đợi người chơi chọn xong -> đóng panel, bật lại màn đen, gọi onResume để player đi tiếp.
         /// </summary>
+        // ─── DIALOG SYSTEM CHO CÁC SỰ KIỆN THIÊN TAI ─────────────────────────────
+        public enum DisasterDialogType
+        {
+            Warning,
+            Success,
+            Failure
+        }
+
         /// <summary>
-        /// Hiển thị hộp thoại Dialog với hiệu ứng Typewriter (gõ chữ từng ký tự).
-        /// - Đang gõ chữ: bấm nút hoặc click màn hình để SKIP (nhảy full text ngay lập tức).
-        /// - Đã hiện full text: bấm để xác nhận đóng và tiếp tục.
-        /// - Nếu không bấm: tự động đóng sau autoCloseDelay giây.
+        /// Thay thế các thẻ mẫu trong văn bản:
+        /// {item} -> Tên item màu xanh lá nổi bật
+        /// {item_raw} -> Tên item thuần
+        /// {disaster} -> Tên thiên tai màu vàng hổ phách
+        /// {disaster_raw} -> Tên thiên tai thuần
+        /// {hp} -> Số tim hiện tại
+        /// {maxhp} -> Số tim tối đa
         /// </summary>
-        public void ShowDialog(string title, string message, string buttonText, Action onConfirm, float autoCloseDelay = 3.5f)
+        public static string FormatDialogTemplate(string template, string itemName, string disasterName, int currentHp, int maxHp)
+        {
+            if (string.IsNullOrEmpty(template)) return "";
+            string formatted = template;
+
+            if (!string.IsNullOrEmpty(itemName))
+            {
+                formatted = formatted.Replace("{item}", $"<color=#81C784><b>{itemName}</b></color>");
+                formatted = formatted.Replace("{item_raw}", itemName);
+            }
+            else
+            {
+                formatted = formatted.Replace("{item}", "");
+                formatted = formatted.Replace("{item_raw}", "");
+            }
+
+            if (!string.IsNullOrEmpty(disasterName))
+            {
+                formatted = formatted.Replace("{disaster}", $"<color=#FFD54F><b>{disasterName}</b></color>");
+                formatted = formatted.Replace("{disaster_raw}", disasterName);
+            }
+            else
+            {
+                formatted = formatted.Replace("{disaster}", "");
+                formatted = formatted.Replace("{disaster_raw}", "");
+            }
+
+            formatted = formatted.Replace("{hp}", currentHp.ToString());
+            formatted = formatted.Replace("{maxhp}", maxHp.ToString());
+
+            return formatted;
+        }
+
+        /// <summary>
+        /// Hiển thị Dialog riêng cho từng loại sự kiện (Cảnh báo, Thành công, Thất bại):
+        /// - Nếu có Panel riêng trong Inspector (successDialogPanel, failureDialogPanel) -> Sử dụng panel đó.
+        /// - Nếu không -> Sử dụng chung disasterDialogPanel và tự động chuyển đổi theme màu sắc (Xanh lá / Đỏ / Vàng).
+        /// - Có hiệu ứng Typewriter, bấm nút hoặc click màn hình để SKIP ngay lập tức, tự động đóng sau autoCloseDelay giây.
+        /// </summary>
+        public void ShowDialogInternal(DisasterDialogType type, string title, string message, string buttonText, Action onConfirm, float autoCloseDelay = 3.5f)
         {
             AutoFindReferences();
+            HideDialog();
 
             if (disasterDialogPanel != null)
             {
+                Transform cardT = disasterDialogPanel.transform.Find("DialogCard");
+                Image cardImg = (cardT != null) ? cardT.GetComponent<Image>() : null;
+                Image btnImg = (dialogConfirmBtn != null) ? dialogConfirmBtn.GetComponent<Image>() : null;
+
+                switch (type)
+                {
+                    case DisasterDialogType.Success:
+                        if (dialogTitleText != null) dialogTitleText.color = new Color(0.35f, 0.9f, 0.45f, 1f); // Xanh lá ngọc
+                        if (btnImg != null) btnImg.color = new Color(0.18f, 0.72f, 0.45f, 1f);
+                        if (cardImg != null) cardImg.color = new Color(0.08f, 0.18f, 0.14f, 0.98f); // Nền xanh sẫm
+                        break;
+                    case DisasterDialogType.Failure:
+                        if (dialogTitleText != null) dialogTitleText.color = new Color(1f, 0.4f, 0.4f, 1f); // Đỏ san hô
+                        if (btnImg != null) btnImg.color = new Color(0.88f, 0.28f, 0.28f, 1f);
+                        if (cardImg != null) cardImg.color = new Color(0.2f, 0.08f, 0.1f, 0.98f); // Nền đỏ sẫm
+                        break;
+                    case DisasterDialogType.Warning:
+                    default:
+                        if (dialogTitleText != null) dialogTitleText.color = new Color(1f, 0.85f, 0.3f, 1f); // Vàng hổ phách
+                        if (btnImg != null) btnImg.color = new Color(0.18f, 0.62f, 0.95f, 1f);
+                        if (cardImg != null) cardImg.color = new Color(0.11f, 0.15f, 0.22f, 0.98f); // Nền navy
+                        break;
+                }
+
                 disasterDialogPanel.SetActive(true);
                 disasterDialogPanel.transform.SetAsLastSibling(); // Luôn hiển thị trên cùng
             }
@@ -611,22 +562,25 @@ namespace QuizGame
                 dialogConfirmBtn.onClick.AddListener(OnDialogClicked);
             }
 
-            // Gán click trên panel để người chơi bấm bất cứ đâu cũng nhận diện Skip / Tiếp tục
-            Button panelBtn = disasterDialogPanel != null ? disasterDialogPanel.GetComponent<Button>() : null;
-            if (panelBtn != null)
+            // Gán click trên panel backdrop để bấm bất cứ đâu cũng nhận diện Skip / Tiếp tục
+            if (disasterDialogPanel != null)
             {
-                panelBtn.onClick.RemoveAllListeners();
-                panelBtn.onClick.AddListener(OnDialogClicked);
-            }
-
-            Transform cardT = disasterDialogPanel != null ? disasterDialogPanel.transform.Find("DialogCard") : null;
-            if (cardT != null)
-            {
-                Button cardBtn = cardT.GetComponent<Button>();
-                if (cardBtn != null)
+                Button panelBtn = disasterDialogPanel.GetComponent<Button>();
+                if (panelBtn != null)
                 {
-                    cardBtn.onClick.RemoveAllListeners();
-                    cardBtn.onClick.AddListener(OnDialogClicked);
+                    panelBtn.onClick.RemoveAllListeners();
+                    panelBtn.onClick.AddListener(OnDialogClicked);
+                }
+
+                Transform cardT = disasterDialogPanel.transform.Find("DialogCard");
+                if (cardT != null)
+                {
+                    Button cardBtn = cardT.GetComponent<Button>();
+                    if (cardBtn != null)
+                    {
+                        cardBtn.onClick.RemoveAllListeners();
+                        cardBtn.onClick.AddListener(OnDialogClicked);
+                    }
                 }
             }
 
@@ -634,28 +588,104 @@ namespace QuizGame
             if (_typewriterCoroutine != null) StopCoroutine(_typewriterCoroutine);
             if (_autoCloseCoroutine != null) StopCoroutine(_autoCloseCoroutine);
 
-            _typewriterCoroutine = StartCoroutine(CoTypewriterRoutine(message, autoCloseDelay));
+            _typewriterCoroutine = StartCoroutine(CoTypewriterRoutine(dialogMessageText, message, autoCloseDelay));
         }
 
-        private IEnumerator CoTypewriterRoutine(string message, float autoCloseDelay)
+        /// <summary>
+        /// Hiển thị Dialog riêng khi ĐỐI PHÓ THÀNH CÔNG
+        /// </summary>
+        public void ShowSuccessDialog(DisasterData disaster, string chosenItemId, string itemName, Action onConfirm, float autoCloseDelay = -1f)
+        {
+            float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
+            string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
+
+            string title = "🎉 ĐỐI PHÓ THÀNH CÔNG!";
+
+            string message = (!string.IsNullOrEmpty(disaster?.successMessage))
+                ? FormatDialogTemplate(disaster.successMessage, itemName, dName, _currentHp, maxHp)
+                : $"Vật phẩm <color=#81C784><b>{itemName}</b></color> đã <color=#81C784><b>ĐỐI PHÓ THÀNH CÔNG</b></color> thiên tai <color=#FFD54F>{dName}</color>!\n\nBạn bảo toàn nguyên vẹn <b>{_currentHp}/{maxHp} Tim (HP)</b> và an toàn vượt qua vùng hiểm trở.";
+
+            ShowDialogInternal(DisasterDialogType.Success, title, message, "Tiếp Tục", onConfirm, delay);
+        }
+
+        /// <summary>
+        /// Hiển thị Dialog riêng khi ĐỐI PHÓ THẤT BẠI
+        /// </summary>
+        public void ShowFailureDialog(DisasterData disaster, string chosenItemId, string itemName, bool hasItemInBag, bool isTimeout, Action onConfirm, float autoCloseDelay = -1f)
+        {
+            float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
+            string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
+
+            string title;
+            string message;
+
+            if (isTimeout)
+            {
+                title = "⌛ HẾT THỜI GIAN!";
+                message = $"Bạn đã không kịp lựa chọn vật phẩm để đối phó <color=#FFD54F><b>{dName}</b></color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color>!\nTim còn lại: <b>{_currentHp}/{maxHp}</b>.";
+            }
+            else if (!hasItemInBag)
+            {
+                title = "⚠️ THIẾU VẬT PHẨM!";
+                message = $"Bạn không có đủ số lượng vật phẩm <color=#E57373><b>{itemName}</b></color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color>.\nTim còn lại: <b>{_currentHp}/{maxHp}</b>.";
+            }
+            else
+            {
+                title = "❌ ĐỐI PHÓ THẤT BẠI!";
+
+                message = (!string.IsNullOrEmpty(disaster?.failureMessage))
+                    ? FormatDialogTemplate(disaster.failureMessage, itemName, dName, _currentHp, maxHp)
+                    : $"Vật phẩm <color=#E57373><b>{itemName}</b></color> <color=#E57373><b>KHÔNG THỂ ĐỐI PHÓ</b></color> được <color=#FFD54F>{dName}</color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color> và tiêu hao 1 {itemName}.\nTim còn lại: <b>{_currentHp}/{maxHp}</b>.";
+            }
+
+            ShowDialogInternal(DisasterDialogType.Failure, title, message, "Tiếp Tục", onConfirm, delay);
+        }
+
+        /// <summary>
+        /// Hiển thị Dialog riêng khi CẢNH BÁO THIÊN TAI
+        /// </summary>
+        public void ShowWarningDialog(DisasterData disaster, Action onConfirm, float autoCloseDelay = -1f)
+        {
+            float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
+            string dName = (disaster != null) ? disaster.disasterName : "Thiên Tai";
+
+            string title = "⚠️ CẢNH BÁO THIÊN TAI!";
+
+            string message = (!string.IsNullOrEmpty(disaster?.warningMessage))
+                ? FormatDialogTemplate(disaster.warningMessage, "", dName, _currentHp, maxHp)
+                : $"Phía trước đang xuất hiện <color=#FFD54F><b>{dName}</b></color> cực kỳ nguy hiểm!\n\nHãy chuẩn bị chọn 1 vật phẩm thích hợp trong túi đồ để đối phó và bảo toàn tính mạng!";
+
+            ShowDialogInternal(DisasterDialogType.Warning, title, message, "Đối Phó Ngay", onConfirm, delay);
+        }
+
+        /// <summary>
+        /// Hàm hiển thị dialog tương thích ngược với code cũ
+        /// </summary>
+        public void ShowDialog(string title, string message, string buttonText, Action onConfirm, float autoCloseDelay = 3.5f)
+        {
+            ShowDialogInternal(DisasterDialogType.Warning, title, message, buttonText, onConfirm, autoCloseDelay);
+        }
+
+        private IEnumerator CoTypewriterRoutine(TMP_Text targetText, string message, float autoCloseDelay)
         {
             _isTyping = true;
+            _activeMessageText = targetText;
 
-            if (dialogMessageText != null)
+            if (targetText != null)
             {
-                dialogMessageText.text = message;
-                dialogMessageText.ForceMeshUpdate();
+                targetText.text = message;
+                targetText.ForceMeshUpdate();
 
-                int totalChars = dialogMessageText.textInfo.characterCount;
-                dialogMessageText.maxVisibleCharacters = 0;
+                int totalChars = targetText.textInfo.characterCount;
+                targetText.maxVisibleCharacters = 0;
 
                 for (int i = 0; i <= totalChars; i++)
                 {
-                    dialogMessageText.maxVisibleCharacters = i;
+                    targetText.maxVisibleCharacters = i;
                     yield return new WaitForSecondsRealtime(typewriterSpeed);
                 }
 
-                dialogMessageText.maxVisibleCharacters = totalChars;
+                targetText.maxVisibleCharacters = totalChars;
             }
 
             _isTyping = false;
@@ -689,9 +719,9 @@ namespace QuizGame
                     _typewriterCoroutine = null;
                 }
 
-                if (dialogMessageText != null)
+                if (_activeMessageText != null)
                 {
-                    dialogMessageText.maxVisibleCharacters = dialogMessageText.textInfo.characterCount;
+                    _activeMessageText.maxVisibleCharacters = _activeMessageText.textInfo.characterCount;
                 }
 
                 _isTyping = false;
@@ -721,7 +751,7 @@ namespace QuizGame
             }
 
             _isTyping = false;
-            HideDialog();
+            HideAllDialogs();
 
             Action callback = _pendingConfirmAction;
             _pendingConfirmAction = null;
@@ -734,6 +764,13 @@ namespace QuizGame
             {
                 disasterDialogPanel.SetActive(false);
             }
+            _activeDialogPanel = null;
+            _activeMessageText = null;
+        }
+
+        public void HideAllDialogs()
+        {
+            HideDialog();
         }
 
         /// <summary>
@@ -766,11 +803,7 @@ namespace QuizGame
             }
 
             // 2. HIỂN THỊ DIALOG CẢNH BÁO TRƯỚC KHI TẮT MÀN ĐEN
-            string dName = (chosenDisaster != null) ? chosenDisaster.disasterName : "Thiên Tai";
-            string warnTitle = "⚠️ CẢNH BÁO THIÊN TAI!";
-            string warnMsg = $"Phía trước đang xuất hiện <color=#FFD54F><b>{dName}</b></color> cực kỳ nguy hiểm!\n\nHãy chuẩn bị chọn 1 vật phẩm thích hợp trong túi đồ để đối phó và bảo toàn tính mạng!";
-
-            ShowDialog(warnTitle, warnMsg, "Đối Phó Ngay", () =>
+            ShowWarningDialog(chosenDisaster, () =>
             {
                 // Khi bấm Đối Phó (hoặc hết giờ dialog):
                 // Mở màn đen để lộ cảnh nhân vật đang đứng giữa 2 trạm
@@ -826,11 +859,8 @@ namespace QuizGame
                 naturalDisastersPanel.SetActive(false);
             }
 
-            // HIỂN THỊ DIALOG HẾT THỜI GIAN
-            string timeoutTitle = "⌛ HẾT THỜI GIAN!";
-            string timeoutMsg = $"Bạn đã không kịp lựa chọn vật phẩm để đối phó <color=#FFD54F><b>{dName}</b></color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color>!\nTim hiện tại: <b>{_currentHp}/{maxHp}</b>.";
-
-            ShowDialog(timeoutTitle, timeoutMsg, "Tiếp Tục", () =>
+            // HIỂN THỊ DIALOG THẤT BẠI DO HẾT THỜI GIAN
+            ShowFailureDialog(disaster, "", "", false, true, () =>
             {
                 // Bật lại màn đen che kín, khi che xong thì player tiếp tục leo
                 CutSceneTransition.Close(onComplete: () =>
@@ -1120,9 +1150,6 @@ namespace QuizGame
                 if (so != null && !string.IsNullOrEmpty(so.itemName)) itemName = so.itemName;
             }
 
-            string resTitle;
-            string resMsg;
-
             if (isCorrect && availableCount > 0)
             {
                 // Chọn ĐÚNG và CÓ ITEM -> Tiêu hao 1 item, Thành công (Không trừ HP)
@@ -1131,8 +1158,15 @@ namespace QuizGame
                     stationQuiz.ConsumeItem(chosenItemId, 1);
                 }
                 Debug.Log($"[NaturalDisaster] 🎉 ĐỐI PHÓ THÀNH CÔNG thiên tai '{dName}' bằng '{chosenItemId}'! Đã tiêu hao 1 item, không bị trừ HP.");
-                resTitle = "🎉 ĐỐI PHÓ THÀNH CÔNG!";
-                resMsg = $"Vật phẩm <color=#81C784><b>{itemName}</b></color> đã <color=#81C784><b>ĐỐI PHÓ THÀNH CÔNG</b></color> thiên tai <color=#FFD54F>{dName}</color>!\n\nBạn bảo toàn nguyên vẹn <b>{_currentHp}/{maxHp} Tim (HP)</b> và an toàn vượt qua vùng hiểm trở.";
+
+                // HIỂN THỊ DIALOG THÀNH CÔNG RIÊNG BIỆT (Panel riêng hoặc dynamic success theme)
+                ShowSuccessDialog(disaster, chosenItemId, itemName, () =>
+                {
+                    CutSceneTransition.Close(onComplete: () =>
+                    {
+                        onResume?.Invoke();
+                    }, duration: 0.22f);
+                }, defaultDialogAutoCloseTime);
             }
             else
             {
@@ -1146,29 +1180,31 @@ namespace QuizGame
                     }
                     string validListStr = (disaster != null) ? string.Join(", ", disaster.GetAllValidCounterItems()) : "none";
                     Debug.LogWarning($"[NaturalDisaster] ❌ Chọn SAI item đối phó ('{chosenItemId}' không khắc chế được [{validListStr}])! Đã tiêu hao 1 '{chosenItemId}' và bị trừ 1 HP!");
-                    resTitle = "❌ ĐỐI PHÓ THẤT BẠI!";
-                    resMsg = $"Vật phẩm <color=#E57373><b>{itemName}</b></color> <color=#E57373><b>KHÔNG THỂ ĐỐI PHÓ</b></color> được <color=#FFD54F>{dName}</color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color> và tiêu hao 1 {itemName}.\nTim còn lại: <b>{Mathf.Max(0, _currentHp - 1)}/{maxHp}</b>.";
+                    TakeDamage(1);
+
+                    // HIỂN THỊ DIALOG THẤT BẠI RIÊNG BIỆT (Panel riêng hoặc dynamic failure theme)
+                    ShowFailureDialog(disaster, chosenItemId, itemName, true, false, () =>
+                    {
+                        CutSceneTransition.Close(onComplete: () =>
+                        {
+                            onResume?.Invoke();
+                        }, duration: 0.22f);
+                    }, defaultDialogAutoCloseTime);
                 }
                 else
                 {
                     Debug.LogWarning($"[NaturalDisaster] ⚠️ Item '{chosenItemId}' số lượng bằng 0 (x0)! Bị trừ 1 HP!");
-                    resTitle = "⚠️ THIẾU VẬT PHẨM!";
-                    resMsg = $"Bạn không có đủ số lượng vật phẩm <color=#E57373><b>{itemName}</b></color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color>.\nTim còn lại: <b>{Mathf.Max(0, _currentHp - 1)}/{maxHp}</b>.";
+                    TakeDamage(1);
+
+                    ShowFailureDialog(disaster, chosenItemId, itemName, false, false, () =>
+                    {
+                        CutSceneTransition.Close(onComplete: () =>
+                        {
+                            onResume?.Invoke();
+                        }, duration: 0.22f);
+                    }, defaultDialogAutoCloseTime);
                 }
-
-                TakeDamage(1);
             }
-
-            // HIỂN THỊ DIALOG KẾT QUẢ VỚI TYPEWRITER & AUTO-CLOSE
-            ShowDialog(resTitle, resMsg, "Tiếp Tục", () =>
-            {
-                // Bật lại màn đen che kín (Close)
-                // Khi màn đen đã che kín, kích hoạt onResume để nhân vật tiếp tục bước đi từ giữa đường tới trạm đích
-                CutSceneTransition.Close(onComplete: () =>
-                {
-                    onResume?.Invoke();
-                }, duration: 0.22f);
-            }, defaultDialogAutoCloseTime);
         }
     }
 }

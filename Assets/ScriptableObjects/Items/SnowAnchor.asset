@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: SnowAnchor
   m_EditorClassIdentifier: Assembly-CSharp::QuizGame.ItemSO
   itemId: item_snowanchor
-  itemName: Snow Anchor
+  itemName: "Neo tuy\u1EBFt"
   icon: {fileID: 565644595, guid: fd91763238a5a85488892ab009b5ab3f, type: 3}

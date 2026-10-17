@@ -22,6 +22,29 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-17 09:20] — feat(disaster-dialog): separate dialogs for success & failure events with custom narratives and UI themes
+- **Tác vụ**:
+  - **Hệ thống Dialog riêng biệt cho các sự kiện Đối phó Thành công và Thất bại (`NaturalDisasterController.cs`)**:
+    - **Cấu hình thông điệp riêng cho từng thiên tai (`DisasterData`)**:
+      - Cấu hình thông điệp trong Inspector cho từng sự kiện: chỉ gồm 3 ô văn bản `warningMessage`, `successMessage`, `failureMessage` (toàn bộ tiêu đề cảnh báo/thành công/thất bại được cố định chuẩn mực tự động).
+      - Hỗ trợ các thẻ thay thế tự động thông minh: `{item}` (tên item màu xanh lá nổi bật), `{item_raw}`, `{disaster}` (tên thiên tai màu vàng hổ phách), `{disaster_raw}`, `{hp}` (số tim hiện tại), `{maxhp}` (tổng số tim tối đa).
+      - Tự động cung cấp văn bản mẫu sống động (Rich-text narrative fallback) cho Bão Tuyết Lở, Thú Dữ Tuyết,... nếu để trống.
+    - **Sử dụng duy nhất 1 Dialog Panel động (Single Dynamic Dialog Panel)**:
+      - Sử dụng trực tiếp `disasterDialogPanel` trong Scene và tự động chuyển đổi theme màu sắc (Xanh lá / Đỏ / Vàng) tương ứng với từng trạng thái:
+        - **Thành công (Success)**: Màu xanh lá ngọc (`#81C784`), nền xanh rêu sang trọng, tôn vinh chiến thắng.
+        - **Thất bại (Failure)**: Màu đỏ san hô / Crimson (`#E57373`), nền đỏ sẫm cảnh báo nguy hiểm khi mất máu.
+        - **Cảnh báo (Warning)**: Màu vàng hổ phách (`#FFD54F`), nền xanh navy huyền ảo.
+      - Gỡ bỏ hoàn toàn các trường khai báo panel riêng biệt rườm rà (`successDialogPanel`, `failureDialogPanel`...) giúp Inspector gọn gàng, tinh tươm.
+    - **Kế thừa đầy đủ cơ chế tương tác mượt mà**:
+      - Hiệu ứng gõ chữ typewriter.
+      - Bấm nút hoặc click bất cứ đâu trên màn hình để **Skip nhảy full text ngay lập tức**.
+      - Bộ đếm thời gian tự động đóng (`defaultDialogAutoCloseTime`) đóng panel và tiếp tục chặng leo núi mượt mà.
+    - **Tối ưu & Tinh gọn Code**:
+      - Loại bỏ hàm tạo UI tự động `CreateDynamicDialogPanel()` và hàm nạp dữ liệu mẫu `SetupDefaultDisastersIfEmpty()` (tiết kiệm hơn 250 dòng code thừa), giúp Controller tập trung 100% vào việc xử lý logic và đọc trực tiếp dữ liệu từ Inspector/Scene.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (Mở rộng `DisasterData`, thêm `DisasterDialogType`, `FormatDialogTemplate`, `ShowSuccessDialog`, `ShowFailureDialog`, `ShowWarningDialog`, `SetupDialogReferences`, cập nhật `OnItemSelected` và `CoDisasterCountdown`, loại bỏ các panel riêng thừa và tối ưu hóa mã nguồn).
+- **Ảnh hưởng**: Hoàn toàn tương thích ngược với các scene cũ, mang lại trải nghiệm cốt truyện và thị giác khác biệt rõ rệt giữa thành công và thất bại.
+
 ### [2026-10-16 13:38] — feat(disaster-dialog): typewriter warning & result dialogs with skip to full text and auto-close timer
 - **Tác vụ**:
   - **Tích hợp hệ thống Dialog thông báo thiên tai (`NaturalDisasterController.cs`)**:
