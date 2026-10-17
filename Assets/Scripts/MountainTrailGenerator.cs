@@ -24,6 +24,22 @@ namespace QuizGame
         [Tooltip("Khoảng cách cố định giữa 2 tầng trạm trên trục Y")]
         [SerializeField] private float layerSpacingY = 2.2f;
 
+        [Header("--- HÌNH ẢNH TRẠM NGẪU NHIÊN (RANDOM STATION SPRITES) ---")]
+        [Tooltip("Danh sách các Sprite trạm ngẫu nhiên (mỗi trạm thường sẽ chọn ngẫu nhiên 1 ảnh từ danh sách này)")]
+        [SerializeField] private List<Sprite> stationSprites = new List<Sprite>();
+
+        [Tooltip("Sprite riêng dành cho trạm Đỉnh Núi (Summit Station). Nếu để trống sẽ chọn ngẫu nhiên theo danh sách trên)")]
+        [SerializeField] private Sprite summitStationSprite;
+
+        [Tooltip("Tự động lật ngẫu nhiên chiều ngang (Flip X) cho mỗi trạm để tạo cảm giác tự nhiên, đa dạng")]
+        [SerializeField] private bool randomFlipX = true;
+
+        [Tooltip("Hiển thị text số thứ tự trạm trên trạm")]
+        [SerializeField] private bool showStationText = true;
+
+        [Tooltip("Áp dụng đổi màu sắc tint lên Sprite trạm (mặc định tắt để giữ nguyên màu sắc gốc của ảnh vẽ)")]
+        [SerializeField] private bool applyColorTint = false;
+
         [Header("--- HÌNH DÁNG NÚI CHÓP NÓN (TAPERED CONE SPREAD) ---")]
         [Tooltip("Bề ngang tối đa ở chân núi (Start / BottomPos). Càng lên đỉnh càng thu hẹp lại.")]
         [SerializeField] private float baseSpreadX = 8.0f;
@@ -203,11 +219,21 @@ namespace QuizGame
             for (int i = 0; i < total; i++)
             {
                 Vector2 pos = currentMap.stationPositions[i].ToVector2();
+                pathPoints[i] = new Vector3(pos.x, pos.y, 0f);
+
                 bool isSummit = (i == total - 1);
                 bool isBase = (i == 0);
 
+                // Điểm đầu (Chân núi i = 0) và điểm cuối (Đỉnh núi i = total - 1) KHÔNG sinh trạm
+                if (isBase || isSummit)
+                {
+                    continue;
+                }
+
+                // Trạm bắt đầu từ điểm thứ 2 (i = 1), số thứ tự trạm hiển thị là 1, 2, 3...
+                int stationNumber = i;
                 GameObject stationObj = null;
-                float scale = isSummit ? summitScale : stationScale;
+                float scale = stationScale;
 
                 if (stationPrefab != null)
                 {
@@ -216,19 +242,31 @@ namespace QuizGame
                 }
                 else
                 {
-                    stationObj = CreateDefaultWorldStation(i, isSummit, isBase);
+                    stationObj = CreateDefaultWorldStation(stationNumber);
                     stationObj.transform.SetParent(parentRoot, false);
                 }
 
                 stationObj.transform.position = new Vector3(pos.x, pos.y, 0f);
-                stationObj.name = isSummit ? $"Summit_Station_{i + 1}" : $"Station_Layer_{i + 1}";
+                stationObj.name = $"Station_{stationNumber}";
 
                 StationWorldItem item = stationObj.GetComponent<StationWorldItem>();
                 if (item == null) item = stationObj.AddComponent<StationWorldItem>();
-                item.Setup(i, isSummit, isBase);
+
+                // Chọn ngẫu nhiên Sprite từ danh sách stationSprites nếu có
+                Sprite chosenSprite = null;
+                if (stationSprites != null && stationSprites.Count > 0)
+                {
+                    var validSprites = stationSprites.FindAll(s => s != null);
+                    if (validSprites.Count > 0)
+                    {
+                        int rndIdx = UnityEngine.Random.Range(0, validSprites.Count);
+                        chosenSprite = validSprites[rndIdx];
+                    }
+                }
+
+                item.Setup(stationNumber, chosenSprite, randomFlipX, showStationText, applyColorTint);
 
                 spawnedStations.Add(stationObj);
-                pathPoints[i] = new Vector3(pos.x, pos.y, 0f);
             }
 
             // Vẽ đường LineRenderer
@@ -264,25 +302,26 @@ namespace QuizGame
             }
         }
 
-        private GameObject CreateDefaultWorldStation(int index, bool isSummit, bool isBase)
+        private GameObject CreateDefaultWorldStation(int stationNumber)
         {
-            GameObject obj = new GameObject($"Station_{index + 1}", typeof(SpriteRenderer));
+            GameObject obj = new GameObject($"Station_{stationNumber}", typeof(SpriteRenderer));
             SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
             sr.sortingOrder = 2;
             sr.sprite = CreateCircleSprite(48);
 
-            float scale = isSummit ? summitScale : stationScale;
+            float scale = stationScale;
             obj.transform.localScale = new Vector3(scale, scale, 1f);
 
             GameObject textObj = new GameObject("StationLabel", typeof(TextMeshPro));
             textObj.transform.SetParent(obj.transform, false);
-            textObj.transform.localPosition = new Vector3(0f, 0f, -0.05f);
+            textObj.transform.localPosition = new Vector3(0f, -0.6f, -0.05f);
 
             TextMeshPro tmp = textObj.GetComponent<TextMeshPro>();
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.fontSize = isSummit ? 2.4f : 1.8f;
+            tmp.fontSize = 2f;
             tmp.sortingOrder = 3;
             tmp.color = Color.white;
+            tmp.text = $"Trạm {stationNumber}";
 
             return obj;
         }

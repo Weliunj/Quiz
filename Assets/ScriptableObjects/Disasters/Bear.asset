@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60718293a4b5c6d7e8f90, type: 3}
+  m_Name: Bear
+  m_EditorClassIdentifier: Assembly-CSharp::QuizGame.DisasterSO
+  disasterId: disaster_bear
+  disasterName: "G\u1EA5u tuy\u1EBFt hung d\u1EEF"
+  disasterSprite: {fileID: 5615735076941066674, guid: 7739329fedda2164e9f2648b255fc826, type: 3}
+  counterItems:
+  - {fileID: 11400000, guid: d824f24f6f665574f844f2c87cde3e96, type: 2}
+  - {fileID: 11400000, guid: 02995b627f0e4cf4b982556fdad4bb46, type: 2}
+  - {fileID: 11400000, guid: 9bfe495509776064b9171f7086304ad8, type: 2}
+  counterItemId: item_bearspray
+  counterItemIds: []
+  warningMessage: "M\u1ED9t con g\u1EA5u tuy\u1EBFt kh\u1ED5ng l\u1ED3 \u0111\xF3i
+    l\u1EED g\u1EA7m r\u1ED1ng lao th\u1EB3ng t\u1EDBi! H\xE3y nhanh ch\xF3ng d\xF9ng
+    v\u1EADt ph\u1EA9m \u0111\u1EC3 t\u1EF1 v\u1EC7 ho\u1EB7c \u0111\xE1nh l\u1EA1c
+    h\u01B0\u1EDBng n\xF3!"
+  successMessage: "B\u1EA1n \u0111\xE3 th\xF4ng minh s\u1EED d\u1EE5ng {item} xua
+    \u0111u\u1ED5i/\u0111\xE1nh l\u1EA1c h\u01B0\u1EDBng con th\xFA hoang d\xE3 th\xE0nh
+    c\xF4ng."
+  failureMessage: "{item} ho\xE0n to\xE0n kh\xF4ng c\xF3 t\xE1c d\u1EE5ng v\u1EDBi
+    con g\u1EA5u hung d\u1EEF!\n-1 HP"

@@ -50,6 +50,7 @@ namespace QuizGame
         private int currentStationIndex = 0;
         private Transform _stationContainer;
 
+        public MapData CurrentMap => currentMap;
         public int CurrentStationIndex => currentStationIndex;
         public bool IsPlayerMoving => playerController != null && playerController.IsPlayerMoving;
         public event Action<int> OnStationReached;

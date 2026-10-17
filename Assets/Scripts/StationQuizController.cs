@@ -78,6 +78,16 @@ namespace QuizGame
 
         private int currentStationIndex = 0;
 
+        /// <summary>
+        /// Trạng thái trạm câu hỏi có đang mở hay không (StationPanel hoặc QuestPanel)
+        /// </summary>
+        public bool IsStationOpen => (stationPanel != null && stationPanel.activeSelf) || (questPanel != null && questPanel.activeSelf);
+
+        /// <summary>
+        /// Sự kiện phát ra khi mở trạm (true) hoặc thoát trạm (false) để các hệ thống khác (như MapManager / ClimbBtn) đồng bộ
+        /// </summary>
+        public event Action<bool> OnStationOpenStateChanged;
+
         // Lưu số lượt chơi còn lại của từng trạm: stationIndex -> remaining tries (ví dụ: 3, 2, 1, 0)
         private Dictionary<int, int> stationRemainingTries = new Dictionary<int, int>();
 
@@ -403,14 +413,17 @@ namespace QuizGame
                 // Chỉ hiển thị nếu số lượng >= 1
                 itemObj.SetActive(count >= 1);
 
-                // Cập nhật Sprite Icon nếu có ItemSO
+                // Cập nhật Sprite Icon nếu có ItemSO vào child ItemImg
                 if (itemDataLookup.TryGetValue(itemId, out ItemSO itemSO) && itemSO != null && itemSO.icon != null)
                 {
-                    Image img = itemObj.GetComponentInChildren<Image>(true);
+                    Transform iconT = FindChildRecursive(itemObj.transform, "ItemImg", "Icon", "Image");
+                    Image img = (iconT != null) ? iconT.GetComponent<Image>() : itemObj.GetComponentInChildren<Image>(true);
                     if (img != null)
                     {
                         img.sprite = itemSO.icon;
                         img.color = Color.white;
+                        img.preserveAspect = true;
+                        img.gameObject.SetActive(true);
                     }
                 }
 
@@ -715,6 +728,17 @@ namespace QuizGame
         }
 
         /// <summary>
+        /// Ẩn prompt nút Join khi rời khỏi trạm hoặc đang leo núi
+        /// </summary>
+        public void HideJoinPrompt()
+        {
+            if (joinBtn != null)
+            {
+                joinBtn.gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>
         /// Ẩn toàn bộ khi rời khỏi map
         /// </summary>
         public void HideAllStationPanels()
@@ -729,6 +753,8 @@ namespace QuizGame
             if (questPanel != null) questPanel.SetActive(false);
             if (joinBtn != null) joinBtn.gameObject.SetActive(false);
             isAnswering = false;
+
+            OnStationOpenStateChanged?.Invoke(false);
         }
 
         /// <summary>
@@ -736,6 +762,14 @@ namespace QuizGame
         /// </summary>
         public void OnJoinButtonClicked()
         {
+            // Kiểm tra: Nếu nhân vật đang di chuyển/leo núi thì tuyệt đối không cho Join
+            var mountainManager = FindFirstObjectByType<MountainStationManager>();
+            if (mountainManager != null && mountainManager.IsPlayerMoving)
+            {
+                Debug.LogWarning("[StationQuiz] Nhân vật đang leo núi, không thể bấm Join!");
+                return;
+            }
+
             if (joinBtn != null) joinBtn.gameObject.SetActive(false);
 
             if (stationPanel != null)
@@ -747,6 +781,8 @@ namespace QuizGame
             {
                 questPanel.SetActive(false);
             }
+
+            OnStationOpenStateChanged?.Invoke(true);
 
             SetupStationItems();
             UpdateRemainText();
@@ -765,6 +801,8 @@ namespace QuizGame
 
             if (questPanel != null) questPanel.SetActive(false);
             if (stationPanel != null) stationPanel.SetActive(false);
+
+            OnStationOpenStateChanged?.Invoke(false);
 
             // Cho phép hiển thị lại nút Join nếu người chơi vẫn ở trạm đó
             if (joinBtn != null) joinBtn.gameObject.SetActive(true);
@@ -846,14 +884,56 @@ namespace QuizGame
 
                 itemData.runtimeBtn = btn;
 
-                // Cập nhật Sprite Icon cho nút nếu ItemSO có icon
-                if (itemData.icon != null)
+                // Đảm bảo icon luôn có nếu ItemSO có icon trong lookup
+                if (itemData.icon == null && !string.IsNullOrEmpty(itemData.itemId))
                 {
-                    Image btnImg = btnObj.GetComponent<Image>();
-                    if (btnImg != null)
+                    if (itemDataLookup != null && itemDataLookup.TryGetValue(itemData.itemId, out ItemSO so) && so != null)
                     {
-                        btnImg.sprite = itemData.icon;
-                        btnImg.color = Color.white;
+                        itemData.icon = so.icon;
+                        if (string.IsNullOrEmpty(itemData.displayName)) itemData.displayName = so.itemName;
+                    }
+                }
+
+                // Cập nhật Sprite Icon cho child ItemImg (như trong Prefab ItemBtn)
+                Transform iconTransform = FindChildRecursive(btnObj.transform, "ItemImg", "Icon", "Image");
+                Image targetIconImg = null;
+                if (iconTransform != null)
+                {
+                    targetIconImg = iconTransform.GetComponent<Image>();
+                }
+                else
+                {
+                    // Nếu không có child tên ItemImg, tìm Image ở các con khác (ngoại trừ root Image)
+                    Image[] childImgs = btnObj.GetComponentsInChildren<Image>(true);
+                    foreach (var img in childImgs)
+                    {
+                        if (img.gameObject != btnObj)
+                        {
+                            targetIconImg = img;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetIconImg != null)
+                {
+                    if (itemData.icon != null)
+                    {
+                        targetIconImg.sprite = itemData.icon;
+                        targetIconImg.color = Color.white;
+                        targetIconImg.preserveAspect = true;
+                        targetIconImg.gameObject.SetActive(true);
+                    }
+                }
+                else
+                {
+                    // Fallback nếu không có child nào thì mới gán vào Image của root
+                    Image rootImg = btnObj.GetComponent<Image>();
+                    if (rootImg != null && itemData.icon != null)
+                    {
+                        rootImg.sprite = itemData.icon;
+                        rootImg.color = Color.white;
+                        rootImg.preserveAspect = true;
                     }
                 }
 

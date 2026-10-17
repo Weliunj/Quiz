@@ -16,15 +16,15 @@ namespace QuizGame
         [Tooltip("Text 3D/World hiển thị số trạm hoặc đỉnh núi")]
         [SerializeField] private TMP_Text labelText;
 
-        [Header("--- MÀU SẮC TRẠM ---")]
-        [Tooltip("Màu của trạm thường")]
-        [SerializeField] private Color normalColor = new Color(0.2f, 0.7f, 1f, 1f);
+        [Header("--- CÀI ĐẶT MÀU SẮC TRẠM ---")]
+        [Tooltip("Màu của trạm thường khi bật applyColorTint")]
+        [SerializeField] private Color normalColor = Color.white;
 
-        [Tooltip("Màu của trạm đỉnh núi")]
-        [SerializeField] private Color summitColor = new Color(1f, 0.85f, 0.2f, 1f);
+        [Tooltip("Màu của trạm đỉnh núi khi bật applyColorTint")]
+        [SerializeField] private Color summitColor = Color.white;
 
-        [Tooltip("Màu của trạm xuất phát")]
-        [SerializeField] private Color baseColor = new Color(0.3f, 0.85f, 0.4f, 1f);
+        [Tooltip("Màu của trạm xuất phát khi bật applyColorTint")]
+        [SerializeField] private Color baseColor = Color.white;
 
         public int StationIndex { get; private set; }
         public bool IsSummit { get; private set; }
@@ -40,25 +40,52 @@ namespace QuizGame
             if (labelText == null) labelText = GetComponentInChildren<TMP_Text>(true);
         }
 
-        public void Setup(int index, bool isSummit, bool isBase)
+        public void Setup(int stationNumber, Sprite customSprite = null, bool randomFlipX = true, bool showLabel = true, bool applyColorTint = false)
         {
-            StationIndex = index;
-            IsSummit = isSummit;
+            StationIndex = stationNumber;
+            IsSummit = false;
 
             AutoFindReferences();
 
             if (iconRenderer != null)
             {
-                if (isSummit) iconRenderer.color = summitColor;
-                else if (isBase) iconRenderer.color = baseColor;
-                else iconRenderer.color = normalColor;
+                // 1. Gán Sprite nếu được truyền vào
+                if (customSprite != null)
+                {
+                    iconRenderer.sprite = customSprite;
+                }
+
+                // 2. Random lật ngang (Flip X)
+                if (randomFlipX)
+                {
+                    iconRenderer.flipX = (UnityEngine.Random.value > 0.5f);
+                }
+
+                // 3. Màu sắc tint (nếu bật, nếu tắt thì giữ nguyên màu gốc của ảnh)
+                if (applyColorTint)
+                {
+                    iconRenderer.color = normalColor;
+                }
+                else
+                {
+                    iconRenderer.color = Color.white;
+                }
             }
 
+            // 4. Nhãn text hiển thị rõ ràng: Trạm [n]
             if (labelText != null)
             {
-                if (isSummit) labelText.text = "🏔️ Đỉnh";
-                else labelText.text = $"{index + 1}";
+                labelText.gameObject.SetActive(showLabel);
+                if (showLabel)
+                {
+                    labelText.text = $"Trạm {stationNumber}";
+                }
             }
+        }
+
+        public void Setup(int index, bool isSummit, bool isBase, Sprite customSprite = null, bool randomFlipX = true, bool showLabel = true, bool applyColorTint = false)
+        {
+            Setup(index, customSprite, randomFlipX, showLabel, applyColorTint);
         }
     }
 }

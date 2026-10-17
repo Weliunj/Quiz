@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60718293a4b5c6d7e8f90, type: 3}
+  m_Name: Avalanche
+  m_EditorClassIdentifier: Assembly-CSharp::QuizGame.DisasterSO
+  disasterId: disaster_avalanche
+  disasterName: "S\u1EA1t l\u1EDF tuy\u1EBFt"
+  disasterSprite: {fileID: -1317903327716568654, guid: 080d6cfe2f55a2f4491b645014841699, type: 3}
+  counterItems:
+  - {fileID: 11400000, guid: 4d58d7ada16ecf54a98cd768520ea69f, type: 2}
+  counterItemId: item_snowanchor
+  counterItemIds: []
+  warningMessage: "M\u1ED9t \u0111\u1EE3t tuy\u1EBFt l\u1EDF kinh ho\xE0ng \u0111ang
+    tr\xE0n xu\u1ED1ng s\u01B0\u1EDDn n\xFAi! H\xE3y nhanh ch\xF3ng ch\u1ECDn thi\u1EBFt
+    b\u1ECB th\xEDch h\u1EE3p \u0111\u1EC3 c\u1ED1 \u0111\u1ECBnh v\u1ECB tr\xED!"
+  successMessage: "B\u1EA1n \u0111\xE3 k\u1ECBp th\u1EDDi d\xF9ng {item} c\u1EAFm
+    ch\u1EB7t v\xE0o v\xE1ch \u0111\xE1 ki\xEAn c\u1ED1, ch\u1EB7n \u0111\u1EE9ng
+    kh\u1ED1i tuy\u1EBFt l\u1EDF."
+  failureMessage: "{item} kh\xF4ng th\u1EC3 ch\u1ECBu n\u1ED5i s\u1EE9c n\u1EB7ng
+    ng\xE0n c\xE2n c\u1EE7a b\xE3o tuy\u1EBFt l\u1EDF!\n-1 HP"

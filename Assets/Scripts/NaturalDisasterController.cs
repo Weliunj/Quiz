@@ -21,59 +21,6 @@ namespace QuizGame
     {
         public static NaturalDisasterController Instance { get; private set; }
 
-        [System.Serializable]
-        public class DisasterData
-        {
-            [Tooltip("Mã định danh thiên tai (ví dụ: avalanche, blizzard, wild_beast...)")]
-            public string disasterId = "avalanche";
-
-            [Tooltip("Tên hiển thị thiên tai")]
-            public string disasterName = "Bão Tuyết Lở";
-
-            [Tooltip("Hình ảnh thiên tai hiển thị trên NaturalDisastersPanel/Image")]
-            public Sprite disasterSprite;
-
-            [Tooltip("Mã itemId của item khắc chế được thiên tai này (dùng nếu chỉ có 1 item, ví dụ: item_camfire1)")]
-            public string counterItemId = "item_camfire1";
-
-            [Tooltip("Danh sách các mã item khắc chế được thiên tai này (nếu có từ 2 item trở lên, người chơi chọn 1 trong các item này đều sẽ thành công và không bị trừ HP)")]
-            public List<string> counterItemIds = new List<string>();
-
-            [Header("--- THÔNG ĐIỆP DIALOG CHO THIÊN TAI NÀY ---")]
-            [TextArea(2, 4)]
-            [Tooltip("Nội dung cảnh báo khi thiên tai xuất hiện (để trống sẽ dùng mặc định. Hỗ trợ thẻ {disaster})")]
-            public string warningMessage = "";
-
-            [TextArea(2, 4)]
-            [Tooltip("Nội dung khi đối phó THÀNH CÔNG (để trống sẽ dùng mặc định. Hỗ trợ thẻ {item}, {disaster}, {hp}, {maxhp})")]
-            public string successMessage = "";
-
-            [TextArea(2, 4)]
-            [Tooltip("Nội dung khi đối phó THẤT BẠI (để trống sẽ dùng mặc định. Hỗ trợ thẻ {item}, {disaster}, {hp}, {maxhp})")]
-            public string failureMessage = "";
-
-            /// <summary>
-            /// Lấy toàn bộ danh sách item khắc chế hợp lệ (kết hợp cả counterItemId và counterItemIds)
-            /// </summary>
-            public List<string> GetAllValidCounterItems()
-            {
-                List<string> list = new List<string>();
-                if (counterItemIds != null)
-                {
-                    foreach (var id in counterItemIds)
-                    {
-                        if (!string.IsNullOrEmpty(id) && !list.Contains(id))
-                            list.Add(id);
-                    }
-                }
-                if (!string.IsNullOrEmpty(counterItemId) && !list.Contains(counterItemId))
-                {
-                    list.Add(counterItemId);
-                }
-                return list;
-            }
-        }
-
         // ─── Inspector ────────────────────────────────────────────────────────────
         [Header("--- 1. HỆ THỐNG TIM (HP) ---")]
         [Tooltip("Vùng chứa các tim (GamePanel/MainPanel/HpContainer)")]
@@ -85,9 +32,9 @@ namespace QuizGame
         [Tooltip("Số lượng tim tối đa khi bắt đầu")]
         [SerializeField] private int maxHp = 5;
 
-        [Header("--- 2. DANH SÁCH THIÊN TAI (DISASTERS) ---")]
-        [Tooltip("Danh sách các thiên tai có thể xảy ra và item tương ứng để chống lại")]
-        [SerializeField] private List<DisasterData> disasterList = new List<DisasterData>();
+        [Header("--- 2. DANH SÁCH THIÊN TAI (DISASTERS - SCRIPTABLE OBJECT) ---")]
+        [Tooltip("Danh sách các thiên tai có thể xảy ra (Kéo thả các file DisasterSO từ Assets/ScriptableObjects/Disasters/)")]
+        [SerializeField] private List<DisasterSO> disasterList = new List<DisasterSO>();
 
         [Tooltip("Tỷ lệ xuất hiện sự kiện thiên tai khi leo giữa 2 trạm (0 = tắt, 1 = 100%)")]
         [Range(0f, 1f)]
@@ -499,6 +446,20 @@ namespace QuizGame
             formatted = formatted.Replace("{hp}", currentHp.ToString());
             formatted = formatted.Replace("{maxhp}", maxHp.ToString());
 
+            // Tự động định dạng màu đỏ nổi bật cho -1 HP nếu có trong nội dung
+            if (formatted.Contains("-1 HP") && !formatted.Contains("<color=#E57373><b>-1 HP</b></color>"))
+            {
+                formatted = formatted.Replace("-1 HP", "<color=#E57373><b>-1 HP</b></color>");
+            }
+            else if (formatted.Contains("-1 Hp") && !formatted.Contains("<color=#E57373><b>-1 HP</b></color>"))
+            {
+                formatted = formatted.Replace("-1 Hp", "<color=#E57373><b>-1 HP</b></color>");
+            }
+            else if (formatted.Contains("-1hp") && !formatted.Contains("<color=#E57373><b>-1 HP</b></color>"))
+            {
+                formatted = formatted.Replace("-1hp", "<color=#E57373><b>-1 HP</b></color>");
+            }
+
             return formatted;
         }
 
@@ -594,7 +555,7 @@ namespace QuizGame
         /// <summary>
         /// Hiển thị Dialog riêng khi ĐỐI PHÓ THÀNH CÔNG
         /// </summary>
-        public void ShowSuccessDialog(DisasterData disaster, string chosenItemId, string itemName, Action onConfirm, float autoCloseDelay = -1f)
+        public void ShowSuccessDialog(DisasterSO disaster, string chosenItemId, string itemName, Action onConfirm, float autoCloseDelay = -1f)
         {
             float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
             string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
@@ -611,7 +572,7 @@ namespace QuizGame
         /// <summary>
         /// Hiển thị Dialog riêng khi ĐỐI PHÓ THẤT BẠI
         /// </summary>
-        public void ShowFailureDialog(DisasterData disaster, string chosenItemId, string itemName, bool hasItemInBag, bool isTimeout, Action onConfirm, float autoCloseDelay = -1f)
+        public void ShowFailureDialog(DisasterSO disaster, string chosenItemId, string itemName, bool hasItemInBag, bool isTimeout, Action onConfirm, float autoCloseDelay = -1f)
         {
             float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
             string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
@@ -622,12 +583,14 @@ namespace QuizGame
             if (isTimeout)
             {
                 title = "⌛ HẾT THỜI GIAN!";
-                message = $"Bạn đã không kịp lựa chọn vật phẩm để đối phó <color=#FFD54F><b>{dName}</b></color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color>!\nTim còn lại: <b>{_currentHp}/{maxHp}</b>.";
+                message = $"Bạn đã không kịp lựa chọn vật phẩm để đối phó <color=#FFD54F><b>{dName}</b></color>!\n<color=#E57373><b>-1 HP</b></color>";
             }
             else if (!hasItemInBag)
             {
                 title = "⚠️ THIẾU VẬT PHẨM!";
-                message = $"Bạn không có đủ số lượng vật phẩm <color=#E57373><b>{itemName}</b></color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color>.\nTim còn lại: <b>{_currentHp}/{maxHp}</b>.";
+                message = string.IsNullOrEmpty(itemName)
+                    ? $"Túi đồ của bạn không có bất kỳ vật phẩm nào để đối phó <color=#FFD54F><b>{dName}</b></color>!\n<color=#E57373><b>-1 HP</b></color>"
+                    : $"Bạn không có đủ số lượng vật phẩm <color=#E57373><b>{itemName}</b></color>!\n<color=#E57373><b>-1 HP</b></color>";
             }
             else
             {
@@ -635,7 +598,7 @@ namespace QuizGame
 
                 message = (!string.IsNullOrEmpty(disaster?.failureMessage))
                     ? FormatDialogTemplate(disaster.failureMessage, itemName, dName, _currentHp, maxHp)
-                    : $"Vật phẩm <color=#E57373><b>{itemName}</b></color> <color=#E57373><b>KHÔNG THỂ ĐỐI PHÓ</b></color> được <color=#FFD54F>{dName}</color>!\n\nBạn bị <color=#E57373><b>trừ 1 Tim (-1 HP)</b></color> và tiêu hao 1 {itemName}.\nTim còn lại: <b>{_currentHp}/{maxHp}</b>.";
+                    : $"Vật phẩm <color=#E57373><b>{itemName}</b></color> <color=#E57373><b>KHÔNG THỂ ĐỐI PHÓ</b></color> được <color=#FFD54F>{dName}</color>!\n<color=#E57373><b>-1 HP</b></color>";
             }
 
             ShowDialogInternal(DisasterDialogType.Failure, title, message, "Tiếp Tục", onConfirm, delay);
@@ -644,7 +607,7 @@ namespace QuizGame
         /// <summary>
         /// Hiển thị Dialog riêng khi CẢNH BÁO THIÊN TAI
         /// </summary>
-        public void ShowWarningDialog(DisasterData disaster, Action onConfirm, float autoCloseDelay = -1f)
+        public void ShowWarningDialog(DisasterSO disaster, Action onConfirm, float autoCloseDelay = -1f)
         {
             float delay = (autoCloseDelay > 0f) ? autoCloseDelay : defaultDialogAutoCloseTime;
             string dName = (disaster != null) ? disaster.disasterName : "Thiên Tai";
@@ -786,7 +749,7 @@ namespace QuizGame
             AutoFindReferences();
 
             // 1. Chọn ngẫu nhiên 1 thiên tai
-            DisasterData chosenDisaster = PickRandomDisaster();
+            DisasterSO chosenDisaster = PickRandomDisaster();
 
             if (chosenDisaster != null)
             {
@@ -827,7 +790,7 @@ namespace QuizGame
             }, defaultDialogAutoCloseTime);
         }
 
-        private IEnumerator CoDisasterCountdown(DisasterData disaster, Action onResume)
+        private IEnumerator CoDisasterCountdown(DisasterSO disaster, Action onResume)
         {
             _hasChosenItem = false;
             float timeLeft = disasterCountdown;
@@ -853,15 +816,27 @@ namespace QuizGame
             Debug.LogWarning($"[NaturalDisaster] ⌛ HẾT THỜI GIAN đối phó thiên tai '{dName}'! Bị trừ 1 HP!");
             TakeDamage(1);
 
-            // Ẩn panel thiên tai
+            // Ẩn vùng nút chọn item
+            if (selectItemContainer != null)
+            {
+                selectItemContainer.gameObject.SetActive(false);
+            }
+
+            // ĐẢM BẢO naturalDisastersPanel (sự kiện img) LUÔN BẬT trong lúc hiện Dialog!
             if (naturalDisastersPanel != null)
             {
-                naturalDisastersPanel.SetActive(false);
+                naturalDisastersPanel.SetActive(true);
             }
 
             // HIỂN THỊ DIALOG THẤT BẠI DO HẾT THỜI GIAN
             ShowFailureDialog(disaster, "", "", false, true, () =>
             {
+                // Khi người chơi xác nhận đóng dialog -> MỚI ẨN naturalDisastersPanel
+                if (naturalDisastersPanel != null)
+                {
+                    naturalDisastersPanel.SetActive(false);
+                }
+
                 // Bật lại màn đen che kín, khi che xong thì player tiếp tục leo
                 CutSceneTransition.Close(onComplete: () =>
                 {
@@ -870,11 +845,13 @@ namespace QuizGame
             }, defaultDialogAutoCloseTime);
         }
 
-        private DisasterData PickRandomDisaster()
+        private DisasterSO PickRandomDisaster()
         {
             if (disasterList == null || disasterList.Count == 0) return null;
-            int idx = UnityEngine.Random.Range(0, disasterList.Count);
-            return disasterList[idx];
+            var validDisasters = disasterList.FindAll(d => d != null);
+            if (validDisasters == null || validDisasters.Count == 0) return null;
+            int idx = UnityEngine.Random.Range(0, validDisasters.Count);
+            return validDisasters[idx];
         }
 
         /// <summary>
@@ -965,7 +942,7 @@ namespace QuizGame
         /// Kiểm tra xem item người chơi chọn có nằm trong danh sách item khắc chế được thiên tai này không.
         /// Chỉ cần 1 trong các item hợp lệ là vượt qua thành công (không mất HP)!
         /// </summary>
-        public bool IsItemValidForDisaster(string chosenItemId, DisasterData disaster)
+        public bool IsItemValidForDisaster(string chosenItemId, DisasterSO disaster)
         {
             if (disaster == null || string.IsNullOrEmpty(chosenItemId)) return false;
 
@@ -986,9 +963,11 @@ namespace QuizGame
         /// Sinh danh sách các nút item mà người chơi có thể chọn để đối phó thiên tai.
         /// QUY TẮC: CHỈ HIỂN THỊ CÁC ITEM CÓ SỐ LƯỢNG > 0 TRONG TÚI!
         /// </summary>
-        private void PopulateSelectItems(DisasterData disaster, Action onResume)
+        private void PopulateSelectItems(DisasterSO disaster, Action onResume)
         {
             if (selectItemContainer == null) return;
+
+            selectItemContainer.gameObject.SetActive(true);
 
             // Xóa sạch các nút cũ trong SelectItemContainer
             for (int i = selectItemContainer.childCount - 1; i >= 0; i--)
@@ -1118,12 +1097,12 @@ namespace QuizGame
         /// <summary>
         /// Xử lý khi người chơi bấm chọn 1 item đối phó:
         /// - Dừng đếm ngược thời gian ngay lập tức.
-        /// - Ẩn panel chọn item.
+        /// - Ẩn panel chọn item (nhưng VẪN GIỮ naturalDisastersPanel hiển thị phía sau dialog).
         /// - Kiểm tra xem item đó có đối phó thành công hay thất bại.
         /// - Hiển thị Dialog thông báo kết quả (Typewriter, bấm Skip để hiện full chữ, có auto-close timer).
-        /// - Khi xác nhận đóng dialog -> Bật màn đen (Close) và tiếp tục hành trình leo núi.
+        /// - Khi xác nhận đóng dialog -> Mới tắt naturalDisastersPanel, bật màn đen (Close) và tiếp tục hành trình leo núi.
         /// </summary>
-        private void OnItemSelected(string chosenItemId, DisasterData disaster, Action onResume)
+        private void OnItemSelected(string chosenItemId, DisasterSO disaster, Action onResume)
         {
             _hasChosenItem = true;
             if (_countdownCoroutine != null)
@@ -1132,10 +1111,10 @@ namespace QuizGame
                 _countdownCoroutine = null;
             }
 
-            // 1. Tắt panel thiên tai
-            if (naturalDisastersPanel != null)
+            // 1. Ẩn vùng nút chọn item để tránh người chơi bấm nhiều lần, NHƯNG VẪN GIỮ naturalDisastersPanel hiển thị!
+            if (selectItemContainer != null)
             {
-                naturalDisastersPanel.SetActive(false);
+                selectItemContainer.gameObject.SetActive(false);
             }
 
             bool isCorrect = IsItemValidForDisaster(chosenItemId, disaster);
@@ -1159,9 +1138,15 @@ namespace QuizGame
                 }
                 Debug.Log($"[NaturalDisaster] 🎉 ĐỐI PHÓ THÀNH CÔNG thiên tai '{dName}' bằng '{chosenItemId}'! Đã tiêu hao 1 item, không bị trừ HP.");
 
-                // HIỂN THỊ DIALOG THÀNH CÔNG RIÊNG BIỆT (Panel riêng hoặc dynamic success theme)
+                // HIỂN THỊ DIALOG THÀNH CÔNG (panel thiên tai vẫn hiển thị phía sau)
                 ShowSuccessDialog(disaster, chosenItemId, itemName, () =>
                 {
+                    // Khi đóng dialog -> MỚI TẮT naturalDisastersPanel và che màn đen
+                    if (naturalDisastersPanel != null)
+                    {
+                        naturalDisastersPanel.SetActive(false);
+                    }
+
                     CutSceneTransition.Close(onComplete: () =>
                     {
                         onResume?.Invoke();
@@ -1182,9 +1167,14 @@ namespace QuizGame
                     Debug.LogWarning($"[NaturalDisaster] ❌ Chọn SAI item đối phó ('{chosenItemId}' không khắc chế được [{validListStr}])! Đã tiêu hao 1 '{chosenItemId}' và bị trừ 1 HP!");
                     TakeDamage(1);
 
-                    // HIỂN THỊ DIALOG THẤT BẠI RIÊNG BIỆT (Panel riêng hoặc dynamic failure theme)
+                    // HIỂN THỊ DIALOG THẤT BẠI (panel thiên tai vẫn hiển thị phía sau)
                     ShowFailureDialog(disaster, chosenItemId, itemName, true, false, () =>
                     {
+                        if (naturalDisastersPanel != null)
+                        {
+                            naturalDisastersPanel.SetActive(false);
+                        }
+
                         CutSceneTransition.Close(onComplete: () =>
                         {
                             onResume?.Invoke();
@@ -1198,6 +1188,11 @@ namespace QuizGame
 
                     ShowFailureDialog(disaster, chosenItemId, itemName, false, false, () =>
                     {
+                        if (naturalDisastersPanel != null)
+                        {
+                            naturalDisastersPanel.SetActive(false);
+                        }
+
                         CutSceneTransition.Close(onComplete: () =>
                         {
                             onResume?.Invoke();

@@ -22,6 +22,163 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-17 14:52] — fix(ui): assign item icon sprite directly to child ItemImg instead of root ItemBtn
+- **Tác vụ**:
+  - **Khắc phục lỗi không nhìn thấy ảnh icon vật phẩm ở nút trạm (`StationQuizController.cs`)**:
+    - Nguyên nhân: Trước đó code gọi `btnObj.GetComponent<Image>()`, gán sprite vào Image của GameObject gốc (`ItemBtn`) - nơi có `alpha = 0` (làm vùng bấm vô hình cho button). Trong khi đó, GameObject con hiển thị ảnh thực tế là `ItemImg` lại không hề được gán sprite.
+    - Khắc phục: Sử dụng `FindChildRecursive(btnObj.transform, "ItemImg", "Icon", "Image")` để tìm chính xác component `Image` của `ItemImg`, đồng thời thiết lập `sprite = itemData.icon`, `color = Color.white`, `preserveAspect = true` và `SetActive(true)`.
+    - Thêm cơ chế tự động tra cứu fallback từ `itemDataLookup` nếu `itemData.icon` bị rỗng.
+    - Áp dụng tương tự cho các item hiển thị trên `MainPanel` (`itemContentPrefab`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (Lines 415-430, 880-935)
+  - `CHANGELOG.md`
+- **Ảnh hưởng**:
+  - Icon vật phẩm hiển thị sắc nét, đúng tỷ lệ tại `ItemImg` bên trong mỗi nút vật phẩm trạm và kho đồ.
+
+### [2026-10-17 14:05] — feat(navigation): mutually exclusive Climb and Join actions to prevent UI conflicts
+- **Tác vụ**:
+  - **Khóa chéo nút Climb và nút Join (`MapManager.cs`, `StationQuizController.cs`)**:
+    - **Khi bấm Climb (hoặc nhân vật đang leo núi / `IsPlayerMoving`)**:
+      - Ẩn ngay lập tức nút Join (`stationQuiz.HideJoinPrompt()`) để người chơi không thể bấm Join khi đang trên đường leo giữa 2 trạm hoặc đang xử lý sự kiện thiên tai.
+      - Tạm thời vô hiệu hóa nút Climb (`climbBtn.interactable = false`) trong lúc leo núi. Chỉ khi đã đặt chân tới trạm tiếp theo an toàn (`onComplete`) thì mới bật lại (`climbBtn.interactable = true`).
+      - Chặn trong hàm `OnJoinButtonClicked()`: nếu nhân vật đang leo núi thì không xử lý và log cảnh báo.
+    - **Khi bấm Join (đang mở StationPanel hoặc đang làm QuestPanel)**:
+      - Ẩn nút Climb (`climbBtn.gameObject.SetActive(false)`) thông qua sự kiện `OnStationOpenStateChanged(true)` để người chơi không thể vừa trả lời câu hỏi vừa bấm leo núi.
+      - Chặn trong hàm `OnClimbButtonClicked()`: nếu `stationQuiz.IsStationOpen` đang là `true` thì không cho phép di chuyển.
+      - Khi bấm Exit trạm (`OnExitButtonClicked`) hoặc thoát map: mở lại nút Climb (`climbBtn.gameObject.SetActive(true)`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (Lines 80-92, 720-785)
+  - `Assets/Scripts/MapManager.cs` (Lines 212-220, 395-405, 442-452, 475-520)
+  - `CHANGELOG.md`
+- **Ảnh hưởng**:
+  - Loại bỏ hoàn toàn tình trạng xung đột trạng thái (bấm Join khi đang leo hoặc bấm Climb khi đang mở trạm làm bài). Luồng game liền mạch và an toàn.
+
+### [2026-10-17 13:36] — fix(disaster-text): concise failure text with newline -1 HP instead of verbose deducted HP message
+- **Tác vụ**:
+  - **Chuẩn hóa thông điệp thất bại & fallback trong đối phó thiên tai (`NaturalDisasterController.cs`)**:
+    - Thay thế các đoạn văn bản rườm rà "Bạn bị trừ 1 Tim (-1 HP)! Tim còn lại: x/y." ở các trường hợp Hết thời gian, Thiếu vật phẩm trong túi, hoặc fallback mặc định.
+    - Chuyển thành cú pháp ngắn gọn, trực quan: xuống dòng `<color=#E57373><b>-1 HP</b></color>`.
+    - Nâng cấp `FormatDialogTemplate`: tự động nhận diện `-1 HP` / `-1 Hp` / `-1hp` trong các mẫu tin ScriptableObject và tô màu đỏ đậm bắt mắt.
+  - **Cập nhật `failureMessage` trong các asset DisasterSO (`Assets/ScriptableObjects/Disasters/`)**:
+    - `Avalanche.asset`: Rút gọn thông điệp kết thúc bằng `\n-1 HP`.
+    - `Sleet.asset`: Rút gọn thông điệp kết thúc bằng `\n-1 HP`.
+    - `Bear.asset`: Rút gọn thông điệp kết thúc bằng `\n-1 HP`.
+    - `Wolf.asset`: Rút gọn thông điệp kết thúc bằng `\n-1 HP`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (Lines 448-460, 583-603)
+  - `Assets/ScriptableObjects/Disasters/Avalanche.asset` (Line 30)
+  - `Assets/ScriptableObjects/Disasters/Sleet.asset` (Line 30)
+  - `Assets/ScriptableObjects/Disasters/Bear.asset` (Line 32)
+  - `Assets/ScriptableObjects/Disasters/Wolf.asset` (Line 32)
+  - `CHANGELOG.md`
+- **Ảnh hưởng**:
+  - Giao diện thông báo dialog ngắn gọn, tinh tế, người chơi nắm bắt ngay lượng máu mất mà không bị rối mắt bởi câu chữ dài dòng.
+
+### [2026-10-17 13:15] — fix(disaster-ui): keep natural disaster panel visible behind dialog until confirmation before closing blackscreen
+- **Tác vụ**:
+  - **Giữ Panel Thiên Tai (`naturalDisastersPanel`) hiển thị trong suốt quá trình hiển thị Dialog (`NaturalDisasterController.cs`)**:
+    - Khắc phục lỗi panel thiên tai bị tắt quá sớm (`SetActive(false)`) làm mất hình ảnh và tên thiên tai khi dialog kết quả đang mở.
+    - **Khi hết thời gian (không chọn item)**: Chỉ ẩn `selectItemContainer` (vùng nút), giữ nguyên ảnh và tên thiên tai trên màn hình, mở Dialog Thất Bại ("⌛ HẾT THỜI GIAN!").
+    - **Khi không có bất kỳ vật phẩm nào trong túi đồ**: Thêm coroutine `CoHandleNoItems`, hiển thị panel thiên tai rồi mở Dialog Thất Bại ("⚠️ THIẾU VẬT PHẨM! - Túi đồ của bạn không có bất kỳ vật phẩm nào để đối phó...").
+    - **Khi người chơi chọn vật phẩm (đúng hoặc sai)**: Giữ nguyên panel thiên tai phía sau dialog thành công/thất bại.
+  - **Đồng bộ thời điểm đóng Panel & che Màn Đen**:
+    - Chỉ sau khi người chơi bấm nút "Tiếp Tục" (hoặc dialog auto-close xong):
+      1. Tắt `naturalDisastersPanel`.
+      2. Màn đen che lại (`CutSceneTransition.Close`).
+      3. Nhân vật tiếp tục di chuyển tới trạm tiếp theo (`onResume?.Invoke()`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (Modified)
+- **Ảnh hưởng**:
+  - Trải nghiệm thị giác liền mạch, người chơi luôn nhìn thấy rõ thiên tai/quái vật đang đối đầu trong khi đọc thông điệp dialog kết quả.
+
+### [2026-10-17 12:45] — feat(station-layout): stations start from point 2 to point n-1 labeled 'Trạm [n]' with bottom & summit as camps
+- **Tác vụ**:
+  - **Tái cấu trúc bố cục trạm trên đường mòn núi (`MountainTrailGenerator.cs`, `StationWorldItem.cs`)**:
+    - **Điểm 1 (Chân núi / BottomPos)**: Là điểm xuất phát ban đầu của người chơi, KHÔNG sinh GameObject trạm.
+    - **Trạm 1**: Bắt đầu chính xác từ điểm thứ 2 trên đường mòn (`i = 1`), hiển thị text rõ ràng là **`Trạm 1`**.
+    - **Trạm 2 ... Trạm N**: Các điểm kế tiếp được đánh số thứ tự liên tục **`Trạm 2`**, **`Trạm 3`**...
+    - **Trạm cuối cùng**: Kết thúc ở điểm ngay trước đỉnh núi (`i = total - 2`).
+    - **Điểm đỉnh núi (TopPos / Summit)**: Là đích đến cuối cùng, KHÔNG sinh GameObject trạm và tạm thời chưa kích hoạt màn hình win.
+  - **Cập nhật hiển thị Text (`StationWorldItem.cs`)**:
+    - Text hiển thị chuẩn xác dạng: `Trạm {stationNumber}` (ví dụ: `Trạm 1`, `Trạm 2`...).
+    - Xóa bỏ text riêng `🏔️ Đỉnh` và xóa màu sắc tint riêng của bottom/summit để các trạm đồng bộ và hiển thị nguyên bản hình ảnh.
+  - **Kiểm soát nút tham gia trạm (`MapManager.cs`)**:
+    - Khi người chơi đứng ở chân núi (index 0) hoặc leo tới đỉnh núi (index cuối), không hiển thị popup nút Join câu hỏi. Chỉ hiển thị khi đến các trạm thực sự ở giữa (từ Trạm 1 đến trạm cuối).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainTrailGenerator.cs` (Modified)
+  - `Assets/Scripts/StationWorldItem.cs` (Modified)
+  - `Assets/Scripts/MountainStationManager.cs` (Modified)
+  - `Assets/Scripts/MapManager.cs` (Modified)
+- **Ảnh hưởng**:
+  - Lộ trình leo núi logic và tự nhiên: xuất phát từ chân núi -> leo dần qua Trạm 1, Trạm 2... -> trạm áp chót -> chạm đỉnh núi.
+
+### [2026-10-17 12:35] — feat(station-visuals): add random station sprite pool, random flip X, and label toggling
+- **Tác vụ**:
+  - **Hỗ trợ Random Sprite đa dạng cho các trạm trên sườn núi (`MountainTrailGenerator.cs`)**:
+    - Thêm trường `stationSprites` (`List<Sprite>`): Cho phép kéo thả nhiều hình ảnh trạm khác nhau (lều, trạm trú ẩn, nhà gỗ, cột mốc...) trong Inspector.
+    - Thêm trường `summitStationSprite` (`Sprite`): Dành riêng cho trạm đỉnh núi cao nhất (ví dụ: cờ chiến thắng, ngôi đền, chóp đỉnh).
+    - Mỗi lần bấm Play hoặc tạo lại map, mỗi trạm sẽ chọn ngẫu nhiên 1 Sprite từ danh sách này.
+  - **Tự động lật ngẫu nhiên chiều ngang (`SpriteRenderer.flipX`)**:
+    - Thêm thuộc tính `randomFlipX` (mặc định bật): Mỗi trạm có 50% cơ hội lật gương hình ảnh theo trục X.
+    - Sử dụng `SpriteRenderer.flipX` giúp lật hình ảnh trạm tự nhiên mà hoàn toàn **không làm ngược chữ số** của `NameText` (TextMeshPro) con.
+  - **Quản lý linh hoạt nhãn Text số trạm (`StationWorldItem.cs`)**:
+    - Thêm `showStationText` để người dùng có thể tùy ý bật hoặc tắt text số thứ tự trạm trên sườn núi.
+    - Thêm `applyColorTint` (mặc định tắt) để giữ nguyên màu sắc gốc sắc nét của các Sprite vẽ sẵn.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/MountainTrailGenerator.cs` (Modified)
+  - `Assets/Scripts/StationWorldItem.cs` (Modified)
+- **Ảnh hưởng**:
+  - Các trạm trên đường mòn núi tuyết giờ đây sống động, đa dạng và không còn bị trùng lặp 1 hình ảnh cố định.
+
+### [2026-10-17 10:50] — feat(disaster-wolf): add Wolf (Đàn Sói Tuyết) DisasterSO with multiple item counters
+- **Tác vụ**:
+  - **Khởi tạo ScriptableObject Chó Sói Tuyết (`Assets/ScriptableObjects/Disasters/Wolf.asset`)**:
+    - Sprite: `Assets/Sprite/NaturalDisaster/Worf.png`
+    - Tên hiển thị: "Đàn sói tuyết" (ID: `disaster_wolf`).
+    - Kéo thả danh sách vật phẩm khắc chế:
+      - `Meat` (`item_meat`): Ném thịt sống đánh lạc hướng bầy sói đói.
+      - `Flare` (`item_flare`): Bắn pháo sáng xua đuổi bầy sói sợ lửa và ánh sáng chói.
+      - `BearSpray` (`item_bearspray`): Xịt cay tự vệ xua đuổi dã thú hung dữ.
+    - Soạn thảo thông điệp cảnh báo, thành công và thất bại chân thực, cuốn hút.
+  - **Liên kết vào Scene (`SampleScene.unity`)**:
+    - Thêm `Wolf.asset` vào `disasterList` của `NaturalDisasterController`.
+- **Danh sách file thay đổi**:
+  - `Assets/ScriptableObjects/Disasters/Wolf.asset` (New)
+  - `Assets/ScriptableObjects/Disasters/Wolf.asset.meta` (New)
+  - `Assets/Scenes/SampleScene.unity` (Modified)
+- **Ảnh hưởng**:
+  - Tăng độ phong phú cho các sự kiện thiên tai/thú dữ ngẫu nhiên khi leo núi tuyết.
+
+### [2026-10-17 10:35] — feat(disaster-so): migrate natural disaster system to ScriptableObjects (DisasterSO) with ItemSO drag-and-drop counters
+- **Tác vụ**:
+  - **Chuyển đổi toàn bộ hệ thống dữ liệu thiên tai sang ScriptableObject (`DisasterSO.cs`)**:
+    - Tạo `DisasterSO` kế thừa `ScriptableObject` với menu `Quiz/Disaster Data` (order = 3).
+    - Hỗ trợ trường kéo thả danh sách vật phẩm khắc chế: `public List<ItemSO> counterItems`.
+    - Hỗ trợ trường fallback chuỗi string: `counterItemId` và `counterItemIds`.
+    - Hàm `GetAllValidCounterItems()` tự động hợp nhất cả các file `ItemSO` được kéo thả và mã ID chuỗi dự phòng, đồng thời chuẩn hóa tên/ID khi người chơi chọn.
+    - Cung cấp 3 trường cấu hình nội dung thông điệp riêng cho thiên tai: `warningMessage`, `successMessage`, `failureMessage` (với các thẻ `{item}`, `{disaster}`, `{hp}`, `{maxhp}`).
+  - **Tái cấu trúc bộ điều khiển thiên tai (`NaturalDisasterController.cs`)**:
+    - Thay thế hoàn toàn class lồng `DisasterData` bằng `DisasterSO`.
+    - Danh sách thiên tai trong Inspector giờ là `[SerializeField] private List<DisasterSO> disasterList`.
+    - Cập nhật an toàn tất cả các phương thức hiển thị dialog, đếm ngược và kiểm tra vật phẩm khắc chế.
+  - **Khởi tạo các file dữ liệu thiên tai ScriptableObject (`Assets/ScriptableObjects/Disasters/`)**:
+    - `Avalanche.asset`: Sạt lở tuyết, khắc chế bằng `SnowAnchor` và `Tent`.
+    - `Sleet.asset`: Bão tuyết, khắc chế bằng `Tent`.
+    - `Bear.asset`: Gấu tuyết hung dữ, khắc chế bằng `BearSpray`, `Flare`, hoặc `Meat`.
+  - **Cập nhật liên kết trong Scene (`SampleScene.unity`)**:
+    - Trỏ `disasterList` của `NaturalDisasterController` trực tiếp vào 3 asset `DisasterSO` mới tạo.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/DisasterSO.cs` (New)
+  - `Assets/Scripts/DisasterSO.cs.meta` (New)
+  - `Assets/Scripts/NaturalDisasterController.cs` (Modified)
+  - `Assets/ScriptableObjects/Disasters/` (New directory & meta)
+  - `Assets/ScriptableObjects/Disasters/Avalanche.asset` + `.meta` (New)
+  - `Assets/ScriptableObjects/Disasters/Sleet.asset` + `.meta` (New)
+  - `Assets/ScriptableObjects/Disasters/Bear.asset` + `.meta` (New)
+  - `Assets/Scenes/SampleScene.unity` (Modified)
+- **Ảnh hưởng**:
+  - Dễ dàng tạo mới bất kỳ sự kiện thiên tai nào trong Unity Editor qua menu `Create -> Quiz -> Disaster Data` và kéo thả trực tiếp các file `ItemSO` vào để thiết lập cách khắc chế mà không cần phải gõ code hay chuỗi ID bằng tay.
+
 ### [2026-10-17 09:20] — feat(disaster-dialog): separate dialogs for success & failure events with custom narratives and UI themes
 - **Tác vụ**:
   - **Hệ thống Dialog riêng biệt cho các sự kiện Đối phó Thành công và Thất bại (`NaturalDisasterController.cs`)**:

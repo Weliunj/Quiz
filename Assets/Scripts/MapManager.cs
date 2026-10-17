@@ -212,6 +212,12 @@ namespace QuizGame
                 climbBtn.onClick.RemoveAllListeners();
                 climbBtn.onClick.AddListener(OnClimbButtonClicked);
             }
+
+            if (stationQuiz != null)
+            {
+                stationQuiz.OnStationOpenStateChanged -= HandleStationOpenStateChanged;
+                stationQuiz.OnStationOpenStateChanged += HandleStationOpenStateChanged;
+            }
         }
 
         public void ShowHomeMenu()
@@ -391,9 +397,17 @@ namespace QuizGame
                 }
             }
 
+            if (climbBtn != null)
+            {
+                climbBtn.gameObject.SetActive(true);
+                climbBtn.interactable = true;
+            }
+
             if (stationQuiz != null)
             {
                 stationQuiz.InitForMap(mapData);
+                stationQuiz.OnStationOpenStateChanged -= HandleStationOpenStateChanged;
+                stationQuiz.OnStationOpenStateChanged += HandleStationOpenStateChanged;
             }
 
             // Khởi tạo 5 tim (HP) khi bắt đầu màn chơi
@@ -418,6 +432,17 @@ namespace QuizGame
 
         private void HandleStationReached(int stationIndex)
         {
+            // Điểm 0 là Chân núi (xuất phát), điểm cuối cùng là Đỉnh núi
+            // Chỉ hiển thị Join trạm câu hỏi khi ở các trạm giữa (từ Trạm 1 đến trước Đỉnh núi)
+            if (mountainManager != null && mountainManager.CurrentMap != null && mountainManager.CurrentMap.stationPositions != null)
+            {
+                int totalPoints = mountainManager.CurrentMap.stationPositions.Count;
+                if (stationIndex <= 0 || stationIndex >= totalPoints - 1)
+                {
+                    return;
+                }
+            }
+
             if (stationQuiz != null)
             {
                 stationQuiz.ShowJoinPrompt(stationIndex);
@@ -429,6 +454,12 @@ namespace QuizGame
             if (stationQuiz != null)
             {
                 stationQuiz.HideAllStationPanels();
+            }
+
+            if (climbBtn != null)
+            {
+                climbBtn.gameObject.SetActive(true);
+                climbBtn.interactable = true;
             }
 
             if (mountainManager != null)
@@ -467,11 +498,33 @@ namespace QuizGame
             Debug.Log("[MapManager] Đã bấm PauseBtn: Trở về MapManagerPanel thành công!");
         }
 
+        private void HandleStationOpenStateChanged(bool isOpen)
+        {
+            if (climbBtn != null)
+            {
+                // Khi trạm đang mở (StationPanel hoặc QuestPanel) -> Ẩn nút Climb để người chơi không thể vừa làm Quiz vừa leo núi
+                climbBtn.gameObject.SetActive(!isOpen);
+            }
+        }
+
         public void OnClimbButtonClicked()
         {
             if (mountainManager == null)
             {
                 Debug.Log("[MapManager] Bấm ClimbBtn: Không tìm thấy MountainStationManager.");
+                return;
+            }
+
+            // Nếu người chơi đang leo núi -> Không cho bấm tiếp
+            if (mountainManager.IsPlayerMoving)
+            {
+                return;
+            }
+
+            // Nếu trạm đang mở hoặc đang làm câu hỏi -> Không cho bấm Climb
+            if (stationQuiz != null && stationQuiz.IsStationOpen)
+            {
+                Debug.LogWarning("[MapManager] Đang ở trong trạm/làm câu hỏi, không thể bấm Climb!");
                 return;
             }
 
@@ -481,12 +534,31 @@ namespace QuizGame
                 return;
             }
 
+            // 1. Ẩn ngay nút Join khi bấm Climb để không thể bấm Join khi đang leo
+            if (stationQuiz != null)
+            {
+                stationQuiz.HideJoinPrompt();
+            }
+
+            // 2. Khóa tạm thời nút Climb trong lúc đang leo
+            if (climbBtn != null)
+            {
+                climbBtn.interactable = false;
+            }
+
             // Kiểm tra xem lần leo này có xuất hiện thiên tai ở mốc giữa chặng (50%) hay không
             bool willTriggerDisaster = (naturalDisaster != null && naturalDisaster.RollDisasterChance());
 
             // Trình tự: Nhân vật bước đi trước -> hiện rõ màn đen -> nếu có thiên tai thì dừng ở giữa & chọn item -> gần tới trạm tiếp theo thì mở màn (mờ dần)
             mountainManager.MovePlayerToNextStation(
-                onComplete:     null,
+                onComplete:     () =>
+                {
+                    // Khi đã tới trạm tiếp theo an toàn -> Mở lại nút Climb
+                    if (climbBtn != null)
+                    {
+                        climbBtn.interactable = true;
+                    }
+                },
                 onNearComplete: () => CutSceneTransition.Open(),
                 onDepart:       () => CutSceneTransition.Close(),
                 onMidwayEvent:  willTriggerDisaster ? (onResume) => naturalDisaster.TriggerDisasterEvent(onResume) : null

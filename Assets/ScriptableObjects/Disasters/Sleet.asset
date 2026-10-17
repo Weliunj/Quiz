@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60718293a4b5c6d7e8f90, type: 3}
+  m_Name: Sleet
+  m_EditorClassIdentifier: Assembly-CSharp::QuizGame.DisasterSO
+  disasterId: disaster_sleet
+  disasterName: "B\xE3o tuy\u1EBFt"
+  disasterSprite: {fileID: 333309073748713176, guid: be411d1c447336d4f87d9bd796f4d9e1, type: 3}
+  counterItems:
+  - {fileID: 11400000, guid: ba7e05c1bee238643a06495d13d74077, type: 2}
+  counterItemId: item_emergencytent
+  counterItemIds: []
+  warningMessage: "M\u1ED9t c\u01A1n b\xE3o tuy\u1EBFt gi\xE1 bu\u1ED1t \u0111ang
+    \u1EADp t\u1EDBi v\u1EDBi gi\xF3 r\xEDt li\xEAn h\u1ED3i v\xE0 nhi\u1EC7t \u0111\u1ED9
+    h\u1EA1 s\xE2u! Mau ch\u1ECDn v\u1EADt ph\u1EA9m gi\u1EEF \u1EA5m v\xE0 tr\xFA
+    \u1EA9n!"
+  successMessage: "B\u1EA1n \u0111\xE3 k\u1ECBp th\u1EDDi d\u1EF1ng {item} ki\xEAn
+    c\u1ED1 gi\u1EEFa tr\u1EDDi gi\xE1 r\xE9t, gi\u1EEF \u1EA5m c\u01A1 th\u1EC3."
+  failureMessage: "{item} kh\xF4ng \u0111\u1EE7 s\u1EE9c che ch\u1EDF b\u1EA1n tr\u01B0\u1EDBc
+    c\xE1i r\xE9t bu\u1ED1t th\u1EA5u x\u01B0\u01A1ng c\u1EE7a b\xE3o tuy\u1EBFt!\n-1 HP"

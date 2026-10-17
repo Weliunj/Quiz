@@ -1,0 +1,724 @@
+{
+ "theme": "Flat Night",
+ "unit": "1x pixels",
+ "parts": {
+  "panels/panel": {
+   "size": [
+    192,
+    192
+   ],
+   "sprite": [
+    192,
+    192
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 34,
+    "top": 34,
+    "right": 34,
+    "bottom": 34
+   }
+  },
+  "panels/inset": {
+   "size": [
+    96,
+    96
+   ],
+   "sprite": [
+    96,
+    96
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 20,
+    "top": 20,
+    "right": 20,
+    "bottom": 20
+   }
+  },
+  "panels/inset_selected": {
+   "size": [
+    96,
+    96
+   ],
+   "sprite": [
+    104,
+    104
+   ],
+   "offset": [
+    4,
+    4
+   ],
+   "border": {
+    "left": 24,
+    "top": 24,
+    "right": 24,
+    "bottom": 24
+   }
+  },
+  "panels/plate_primary": {
+   "size": [
+    256,
+    56
+   ],
+   "sprite": [
+    256,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 30,
+    "top": 0,
+    "right": 30,
+    "bottom": 0
+   }
+  },
+  "panels/plate_danger": {
+   "size": [
+    256,
+    56
+   ],
+   "sprite": [
+    256,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 30,
+    "top": 0,
+    "right": 30,
+    "bottom": 0
+   }
+  },
+  "panels/pill": {
+   "size": [
+    160,
+    48
+   ],
+   "sprite": [
+    160,
+    48
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 26,
+    "top": 0,
+    "right": 26,
+    "bottom": 0
+   }
+  },
+  "panels/divider": {
+   "size": [
+    192,
+    2
+   ],
+   "sprite": [
+    192,
+    2
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 4,
+    "top": 0,
+    "right": 4,
+    "bottom": 0
+   }
+  },
+  "buttons/button_64_primary": {
+   "size": [
+    192,
+    64
+   ],
+   "sprite": [
+    192,
+    64
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 34,
+    "top": 0,
+    "right": 34,
+    "bottom": 0
+   }
+  },
+  "buttons/button_64_secondary": {
+   "size": [
+    192,
+    64
+   ],
+   "sprite": [
+    192,
+    64
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 34,
+    "top": 0,
+    "right": 34,
+    "bottom": 0
+   }
+  },
+  "buttons/button_64_danger": {
+   "size": [
+    192,
+    64
+   ],
+   "sprite": [
+    192,
+    64
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 34,
+    "top": 0,
+    "right": 34,
+    "bottom": 0
+   }
+  },
+  "buttons/button_64_success": {
+   "size": [
+    192,
+    64
+   ],
+   "sprite": [
+    192,
+    64
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 34,
+    "top": 0,
+    "right": 34,
+    "bottom": 0
+   }
+  },
+  "buttons/button_56_primary": {
+   "size": [
+    160,
+    56
+   ],
+   "sprite": [
+    160,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 30,
+    "top": 0,
+    "right": 30,
+    "bottom": 0
+   }
+  },
+  "buttons/button_56_secondary": {
+   "size": [
+    160,
+    56
+   ],
+   "sprite": [
+    160,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 30,
+    "top": 0,
+    "right": 30,
+    "bottom": 0
+   }
+  },
+  "buttons/button_56_danger": {
+   "size": [
+    160,
+    56
+   ],
+   "sprite": [
+    160,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 30,
+    "top": 0,
+    "right": 30,
+    "bottom": 0
+   }
+  },
+  "buttons/button_56_success": {
+   "size": [
+    160,
+    56
+   ],
+   "sprite": [
+    160,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 30,
+    "top": 0,
+    "right": 30,
+    "bottom": 0
+   }
+  },
+  "buttons/button_44_primary": {
+   "size": [
+    128,
+    44
+   ],
+   "sprite": [
+    128,
+    44
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 24,
+    "top": 0,
+    "right": 24,
+    "bottom": 0
+   }
+  },
+  "buttons/button_44_secondary": {
+   "size": [
+    128,
+    44
+   ],
+   "sprite": [
+    128,
+    44
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 24,
+    "top": 0,
+    "right": 24,
+    "bottom": 0
+   }
+  },
+  "buttons/button_44_danger": {
+   "size": [
+    128,
+    44
+   ],
+   "sprite": [
+    128,
+    44
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 24,
+    "top": 0,
+    "right": 24,
+    "bottom": 0
+   }
+  },
+  "buttons/button_44_success": {
+   "size": [
+    128,
+    44
+   ],
+   "sprite": [
+    128,
+    44
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 24,
+    "top": 0,
+    "right": 24,
+    "bottom": 0
+   }
+  },
+  "buttons/button_40_primary": {
+   "size": [
+    128,
+    40
+   ],
+   "sprite": [
+    128,
+    40
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 22,
+    "top": 0,
+    "right": 22,
+    "bottom": 0
+   }
+  },
+  "buttons/button_40_secondary": {
+   "size": [
+    128,
+    40
+   ],
+   "sprite": [
+    128,
+    40
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 22,
+    "top": 0,
+    "right": 22,
+    "bottom": 0
+   }
+  },
+  "buttons/button_40_danger": {
+   "size": [
+    128,
+    40
+   ],
+   "sprite": [
+    128,
+    40
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 22,
+    "top": 0,
+    "right": 22,
+    "bottom": 0
+   }
+  },
+  "buttons/button_40_success": {
+   "size": [
+    128,
+    40
+   ],
+   "sprite": [
+    128,
+    40
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 22,
+    "top": 0,
+    "right": 22,
+    "bottom": 0
+   }
+  },
+  "buttons/button_square_64_primary": {
+   "size": [
+    64,
+    64
+   ],
+   "sprite": [
+    64,
+    64
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "buttons/button_square_64_secondary": {
+   "size": [
+    64,
+    64
+   ],
+   "sprite": [
+    64,
+    64
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "buttons/button_square_56_primary": {
+   "size": [
+    56,
+    56
+   ],
+   "sprite": [
+    56,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "buttons/button_square_56_secondary": {
+   "size": [
+    56,
+    56
+   ],
+   "sprite": [
+    56,
+    56
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "buttons/button_square_44_primary": {
+   "size": [
+    44,
+    44
+   ],
+   "sprite": [
+    44,
+    44
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "buttons/button_square_44_secondary": {
+   "size": [
+    44,
+    44
+   ],
+   "sprite": [
+    44,
+    44
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "controls/checkbox_on": {
+   "size": [
+    32,
+    32
+   ],
+   "sprite": [
+    32,
+    32
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "controls/checkbox_off": {
+   "size": [
+    32,
+    32
+   ],
+   "sprite": [
+    32,
+    32
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "badges/badge_red": {
+   "size": [
+    36,
+    36
+   ],
+   "sprite": [
+    36,
+    36
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "chips/chip_green": {
+   "size": [
+    56,
+    28
+   ],
+   "sprite": [
+    56,
+    28
+   ],
+   "offset": [
+    0,
+    0
+   ],
+   "border": {
+    "left": 14,
+    "top": 0,
+    "right": 14,
+    "bottom": 0
+   }
+  },
+  "frames/avatar_frame": {
+   "size": [
+    80,
+    80
+   ],
+   "sprite": [
+    80,
+    80
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_close": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_check": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_plus": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_lock": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_chevron_down": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_chevron_right": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  },
+  "glyphs/glyph_chevron_left": {
+   "size": [
+    24,
+    24
+   ],
+   "sprite": [
+    24,
+    24
+   ],
+   "offset": [
+    0,
+    0
+   ]
+  }
+ }
+}
