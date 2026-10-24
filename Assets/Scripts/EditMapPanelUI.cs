@@ -149,6 +149,7 @@ namespace QuizGame
         {
             AutoFindReferences();
             SetupGuideContent();
+            SetupInputFieldsStyle();
             BindEvents();
         }
 
@@ -159,8 +160,48 @@ namespace QuizGame
             EnsureThemesLoaded();
             UpdateThemeBtnUI();
             UpdateTabVisuals(0);
+            SetupInputFieldsStyle();
         }
 #endif
+
+        /// <summary>
+        /// Cấu hình tự động xuống dòng (MultiLine) và dải cỡ chữ Auto-Size hợp lý cho các ô nhập liệu,
+        /// tránh tình trạng câu hỏi dài bị ép trên 1 dòng ngang với chữ quá nhỏ.
+        /// </summary>
+        private void SetupInputFieldsStyle()
+        {
+            if (questionInput != null)
+            {
+                questionInput.lineType = TMP_InputField.LineType.MultiLineNewline;
+                if (questionInput.textComponent != null)
+                {
+                    questionInput.textComponent.enableWordWrapping = true;
+                    questionInput.textComponent.enableAutoSizing = true;
+                    questionInput.textComponent.fontSizeMin = 22f;
+                    questionInput.textComponent.fontSizeMax = 38f;
+                    questionInput.textComponent.alignment = TextAlignmentOptions.TopLeft;
+                }
+            }
+
+            ConfigureAnswerInputField(answerA);
+            ConfigureAnswerInputField(answerB);
+            ConfigureAnswerInputField(answerC);
+            ConfigureAnswerInputField(answerD);
+        }
+
+        private void ConfigureAnswerInputField(TMP_InputField input)
+        {
+            if (input == null) return;
+            input.lineType = TMP_InputField.LineType.MultiLineSubmit;
+            if (input.textComponent != null)
+            {
+                input.textComponent.enableWordWrapping = true;
+                input.textComponent.enableAutoSizing = true;
+                input.textComponent.fontSizeMin = 18f;
+                input.textComponent.fontSizeMax = 36f;
+                input.textComponent.alignment = TextAlignmentOptions.MidlineLeft;
+            }
+        }
 
         private void SetupGuideContent()
         {
@@ -1505,19 +1546,33 @@ namespace QuizGame
         public static bool TryRepairMalformedQuestion(QuestionData q)
         {
             if (q == null) return false;
+            // Nếu các ô 2, 3, 4 trống (hoặc ô 1 chứa cụm B. C. D.) và ô 1 có nội dung
             if (string.IsNullOrEmpty(q.option2) && string.IsNullOrEmpty(q.option3) && !string.IsNullOrEmpty(q.option1))
             {
                 string textToParse = q.option1.Trim();
-                if (!OptionPattern.IsMatch(textToParse.Substring(0, Mathf.Min(8, textToParse.Length))))
-                {
-                    textToParse = "A. " + textToParse;
-                }
-
                 var matches = OptionPattern.Matches(textToParse);
-                if (matches.Count >= 2)
+                if (matches.Count >= 1)
                 {
                     string a = "", b = "", c = "", d = "";
                     int foundCorrect = q.correctIndex;
+
+                    var firstM = matches[0];
+                    char firstLetter = 'A';
+                    string firstMStr = firstM.Value.ToUpper();
+                    for (int k = 0; k < firstMStr.Length; k++)
+                    {
+                        if (firstMStr[k] >= 'A' && firstMStr[k] <= 'D') { firstLetter = firstMStr[k]; break; }
+                    }
+
+                    // Nếu match đầu tiên không phải là A (ví dụ chữ cái bắt đầu từ B.),
+                    // thì toàn bộ phần chuỗi trước match đầu tiên chính là nội dung của đáp án A!
+                    if (firstLetter != 'A' && firstM.Index > 0)
+                    {
+                        string prefix = textToParse.Substring(0, firstM.Index).Trim();
+                        bool isStar = prefix.StartsWith("*") || prefix.EndsWith("*");
+                        a = prefix.Trim('*').Trim();
+                        if (isStar) foundCorrect = 0;
+                    }
 
                     for (int i = 0; i < matches.Count; i++)
                     {
@@ -1542,12 +1597,19 @@ namespace QuizGame
                         else if (idx == 3) { d = optContent; if (isStar) foundCorrect = 3; }
                     }
 
-                    q.option1 = a;
-                    q.option2 = b;
-                    q.option3 = c;
-                    q.option4 = d;
-                    q.correctIndex = foundCorrect;
-                    return true;
+                    int nonEmptyCount = (!string.IsNullOrEmpty(a) ? 1 : 0) +
+                                        (!string.IsNullOrEmpty(b) ? 1 : 0) +
+                                        (!string.IsNullOrEmpty(c) ? 1 : 0) +
+                                        (!string.IsNullOrEmpty(d) ? 1 : 0);
+                    if (nonEmptyCount >= 2)
+                    {
+                        q.option1 = a;
+                        q.option2 = b;
+                        q.option3 = c;
+                        q.option4 = d;
+                        q.correctIndex = Mathf.Clamp(foundCorrect, 0, 3);
+                        return true;
+                    }
                 }
             }
             return false;

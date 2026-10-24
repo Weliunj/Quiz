@@ -146,6 +146,26 @@ namespace QuizGame
                 string[] opts = new string[] { data.option1, data.option2, data.option3, data.option4 };
                 int idx = Mathf.Clamp(data.correctIndex, 0, 3);
                 string correctAns = opts[idx];
+
+                // Nếu đáp án tại idx bị rỗng, tự động tìm đáp án đầu tiên có nội dung
+                if (string.IsNullOrWhiteSpace(correctAns))
+                {
+                    for (int k = 0; k < opts.Length; k++)
+                    {
+                        if (!string.IsNullOrWhiteSpace(opts[k]))
+                        {
+                            correctAns = opts[k];
+                            idx = k;
+                            break;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(correctAns))
+                {
+                    correctAns = "Chưa có";
+                }
+
                 if (maxAnswerLength > 0 && !string.IsNullOrEmpty(correctAns) && correctAns.Length > maxAnswerLength)
                 {
                     correctAns = correctAns.Substring(0, maxAnswerLength) + "...";

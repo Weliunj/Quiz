@@ -22,6 +22,34 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-24 12:18] — fix(ui): enable multi-line wrapping and readable auto-sizing for question and answer inputs
+- **Tác vụ**:
+  - **Khắc phục tình trạng câu hỏi dài bị ép trên 1 dòng duy nhất và chữ bị co nhỏ tí hon**:
+    - Chuyển `lineType` của ô Câu hỏi (`questionInput`) từ `SingleLine` (0) sang `MultiLineNewline` (2) cả trong Scene `SampleScene.unity` lẫn code khởi tạo `SetupInputFieldsStyle()` trong `EditMapPanelUI.cs`.
+    - Bật chế độ tự động xuống dòng (`enableWordWrapping = true`) và căn lề trên cùng bên trái (`alignment = TopLeft`) cho ô câu hỏi để tận dụng tối đa chiều cao rộng của khung Question.
+    - Cấu hình dải kích thước chữ Auto-Size hợp lý (`fontSizeMin = 22f`, `fontSizeMax = 38f`) giúp câu hỏi dài tự động ngắt dòng 2, 3, 4 đều đặn, chữ luôn to rõ và dễ đọc.
+    - Đồng bộ cấu hình tự động xuống dòng và dải cỡ chữ (`fontSizeMin = 18f`, `fontSizeMax = 36f`) cho 4 ô đáp án A, B, C, D (`MultiLineSubmit`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scenes/SampleScene.unity`
+  - `Assets/Scripts/EditMapPanelUI.cs`
+- **Ảnh hưởng**: Khi gõ hoặc sửa câu hỏi dài, text sẽ tự động xuống dòng mềm mại trong khung chữ nhật, không bị co cụm trên 1 dòng đơn hay bị thu nhỏ mờ mắt.
+
+
+### [2026-10-24 11:59] — fix(quiz-data): restore UTF-8 encoding in save file and handle prefix option A extraction
+- **Tác vụ**:
+  - **Khắc phục triệt để lỗi font tiếng Việt (mojibake) trong file save (`quiz_save.json`)**:
+    - Nạp và ghi lại toàn bộ dữ liệu câu hỏi bằng bảng mã chuẩn `UTF-8 (No BOM)`. Khôi phục nguyên vẹn 100% tiếng Việt có dấu cho tất cả câu hỏi và đáp án (ví dụ: *"Kết quả của phép tính 682 - 247 là bao nhiêu?"*).
+  - **Khắc phục lỗi câu hỏi chỉ hiện "Đáp án: " (thiếu nội dung)**:
+    - Trong `EditMapPanelUI.cs` (`TryRepairMalformedQuestion`): bổ sung cơ chế bóc tách phần chuỗi đứng trước ký hiệu `B.` để gán làm nội dung của đáp án A nếu câu hỏi bị mất chữ cái `A.`.
+    - Trong `QuestionItemUI.cs`: thêm cơ chế fallback nếu `correctAns` bị rỗng thì tự động tìm đáp án hợp lệ đầu tiên để không bao giờ bị hiện chuỗi trống sau chữ "Đáp án: ".
+    - Nạp chuẩn xác toàn bộ 15 câu hỏi từ file gốc `cau_hoi_toan_lop_1_2_3.txt` vào map hiện tại với đầy đủ 4 đáp án A, B, C, D và chỉ định đúng vị trí đáp án đúng.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+  - `Assets/Scripts/QuestionItemUI.cs`
+  - `quiz_save.json`
+- **Ảnh hưởng**: Không còn tình trạng lỗi font hay bị hiển thị trơ trọi chữ "Đáp án: "; toàn bộ câu hỏi và đáp án hiển thị tiếng Việt sắc nét và chuẩn xác.
+
+
 ### [2026-10-24 11:47] — fix(import-ui): support inline options on single line, auto-repair malformed questions, and format correctText to show only answer content
 - **Tác vụ**:
   - **Hỗ trợ phân tích đáp án viết trên cùng 1 dòng (`EditMapPanelUI.cs`)**:
