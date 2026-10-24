@@ -104,6 +104,22 @@ namespace QuizGame
         private Action _pendingConfirmAction;
         private GameObject _activeDialogPanel;
         private TMP_Text _activeMessageText;
+        private DisasterDialogType _currentDialogType = DisasterDialogType.Warning;
+
+        // Lưu trữ danh sách nút chọn item để điều khiển highlight và đổi lựa chọn
+        private class SelectItemHolder
+        {
+            public string itemId;
+            public string itemName;
+            public int count;
+            public GameObject btnObj;
+            public Image borderImg;
+            public Color defaultColor;
+            public Vector3 defaultScale;
+        }
+
+        private List<SelectItemHolder> _spawnedItemHolders = new List<SelectItemHolder>();
+        private SelectItemHolder _currentSelectedHolder = null;
 
         public int CurrentHp => _currentHp;
         public int MaxHp => maxHp;
@@ -542,6 +558,7 @@ namespace QuizGame
         public void ShowDialogInternal(DisasterDialogType type, string title, string message, string buttonText, Action onConfirm, float autoCloseDelay = 3.5f)
         {
             AutoFindReferences();
+            _currentDialogType = type;
             HideDialog();
 
             if (disasterDialogPanel != null)
@@ -801,7 +818,13 @@ namespace QuizGame
             }
 
             _isTyping = false;
-            HideAllDialogs();
+
+            // Nếu là Warning Dialog -> ẩn ngay để lộ panel đối phó thiên tai
+            // Nếu là Result Dialog (Success / Failure / BadLuck) -> giữ lại để màn đen che kín trước, rồi mới tắt ngầm bên dưới
+            if (_currentDialogType == DisasterDialogType.Warning)
+            {
+                HideAllDialogs();
+            }
 
             Action callback = _pendingConfirmAction;
             _pendingConfirmAction = null;
@@ -915,43 +938,24 @@ namespace QuizGame
 
             if (_hasChosenItem) yield break;
 
-            // HẾT THỜI GIAN -> BỊ TRỪ 1 HP!
+            // HẾT THỜI GIAN:
             if (disasterTimeText != null)
             {
                 disasterTimeText.text = "0s";
                 disasterTimeText.color = _warningRedColor;
             }
-            string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
-            Debug.LogWarning($"[NaturalDisaster] ⌛ HẾT THỜI GIAN đối phó thiên tai '{dName}'! Bị trừ 1 HP!");
-            TakeDamage(1);
 
-            // Ẩn vùng nút chọn item
-            if (selectItemContainer != null)
+            // Tự động chốt theo item đang được chọn (nếu có chọn), hoặc xử lý timeout nếu chưa chọn item nào
+            if (_currentSelectedHolder != null)
             {
-                selectItemContainer.gameObject.SetActive(false);
+                Debug.Log($"[NaturalDisaster] ⌛ HẾT THỜI GIAN! Tự động chốt theo item đang chọn: '{_currentSelectedHolder.itemId}'");
+                ExecuteDisasterDecision(_currentSelectedHolder.itemId, disaster, onResume);
             }
-
-            // ĐẢM BẢO naturalDisastersPanel (sự kiện img) LUÔN BẬT trong lúc hiện Dialog!
-            if (naturalDisastersPanel != null)
+            else
             {
-                naturalDisastersPanel.SetActive(true);
+                Debug.LogWarning($"[NaturalDisaster] ⌛ HẾT THỜI GIAN mà chưa chọn bất kỳ item nào! Bị trừ 1 HP!");
+                ExecuteDisasterDecision(null, disaster, onResume);
             }
-
-            // HIỂN THỊ DIALOG THẤT BẠI DO HẾT THỜI GIAN
-            ShowFailureDialog(disaster, "", "", false, true, () =>
-            {
-                // Khi người chơi xác nhận đóng dialog -> MỚI ẨN naturalDisastersPanel
-                if (naturalDisastersPanel != null)
-                {
-                    naturalDisastersPanel.SetActive(false);
-                }
-
-                // Bật lại màn đen che kín, khi che xong thì player tiếp tục leo
-                CutSceneTransition.Close(onComplete: () =>
-                {
-                    onResume?.Invoke();
-                }, duration: 0.22f);
-            }, defaultDialogAutoCloseTime);
         }
 
         private DisasterSO PickRandomDisaster()
@@ -1129,6 +1133,10 @@ namespace QuizGame
             }
             candidateItems = uniqueItems;
 
+            _spawnedItemHolders.Clear();
+            _currentSelectedHolder = null;
+            _hasChosenItem = false;
+
             int spawnedCount = 0;
 
             foreach (var itemSO in candidateItems)
@@ -1138,7 +1146,7 @@ namespace QuizGame
                 string itemId = string.IsNullOrEmpty(itemSO.itemId) ? itemSO.name : itemSO.itemId;
                 int count = (stationQuiz != null) ? stationQuiz.GetItemQuantity(itemId) : 0;
 
-                // ─── ĐIỀU KIỆN QUAN TRỌNG: CHỈ HIỆN ITEM SỐ LƯỢNG > 0 ───
+                // CHỈ HIỂN THỊ CÁC ITEM ĐANG SỞ HỮU TRONG TÚI (SỐ LƯỢNG > 0)
                 if (count <= 0) continue;
 
                 spawnedCount++;
@@ -1159,71 +1167,200 @@ namespace QuizGame
                 btnObj.SetActive(true);
 
                 // Gán icon nếu prefab có Image con
-                Transform iconT = FindChildRecursive(btnObj.transform, "ItemImg", "Icon", "Image");
-                if (iconT != null && itemSO.icon != null)
+                Transform iconT = FindChildRecursive(btnObj.transform, "ItemImg", "Icon");
+                Image iconImg = null;
+                if (iconT != null)
                 {
-                    Image iconImg = iconT.GetComponent<Image>();
-                    if (iconImg != null)
+                    iconImg = iconT.GetComponent<Image>();
+                }
+                else
+                {
+                    Image[] allImgs = btnObj.GetComponentsInChildren<Image>(true);
+                    foreach (var img in allImgs)
                     {
-                        iconImg.sprite = itemSO.icon;
-                        iconImg.color = Color.white;
+                        if (img.gameObject != btnObj && img.gameObject.name != "Image")
+                        {
+                            iconImg = img;
+                            break;
+                        }
                     }
                 }
 
+                if (iconImg != null && itemSO.icon != null)
+                {
+                    iconImg.sprite = itemSO.icon;
+                    iconImg.color = Color.white;
+                    iconImg.preserveAspect = true;
+                }
+
                 // Gán tên Item vào NameText
-                TMP_Text nameText = FindChildRecursive(btnObj.transform, "NameText")?.GetComponent<TMP_Text>();
+                TMP_Text nameText = FindChildRecursive(btnObj.transform, "NameText", "Name")?.GetComponent<TMP_Text>();
                 if (nameText != null)
                 {
                     nameText.text = itemName;
                 }
 
-                // Gán số lượng sở hữu vào NumberText
-                TMP_Text numText = FindChildRecursive(btnObj.transform, "NumberText")?.GetComponent<TMP_Text>();
+                // Gán số lượng sở hữu vào QuanText / NumberText
+                TMP_Text numText = FindChildRecursive(btnObj.transform, "QuanText", "NumberText", "Quantity")?.GetComponent<TMP_Text>();
                 if (numText != null)
                 {
                     numText.text = $"x{count}";
+                    numText.color = Color.white;
                 }
 
-                // Gán sự kiện khi bấm nút chọn item này (dùng capturedId để tránh bug closure)
+                // Tìm Image làm khung viền để highlight
+                Image borderImg = null;
+                Transform frameT = FindChildRecursive(btnObj.transform, "Image", "Frame", "Border", "Bg");
+                if (frameT != null) borderImg = frameT.GetComponent<Image>();
+                if (borderImg == null) borderImg = btnObj.GetComponent<Image>();
+
+                SelectItemHolder holder = new SelectItemHolder
+                {
+                    itemId = itemId,
+                    itemName = itemName,
+                    count = count,
+                    btnObj = btnObj,
+                    borderImg = borderImg,
+                    defaultColor = (borderImg != null) ? borderImg.color : Color.white,
+                    defaultScale = btnObj.transform.localScale
+                };
+                _spawnedItemHolders.Add(holder);
+
+                // Gán sự kiện click: chọn item hoặc đổi sang item khác, click lại chính item đó để chốt ngay
                 Button btnComp = btnObj.GetComponent<Button>();
                 if (btnComp != null)
                 {
-                    string capturedId = itemId;
                     btnComp.onClick.RemoveAllListeners();
                     btnComp.onClick.AddListener(() =>
                     {
-                        OnItemSelected(capturedId, disaster, onResume);
+                        OnSelectItemClicked(holder, disaster, onResume);
                     });
                 }
             }
 
             if (spawnedCount == 0)
             {
-                Debug.LogWarning("[NaturalDisaster] Người chơi không có bất kỳ item nào trong túi (tất cả số lượng đều = 0)!");
+                Debug.LogWarning("[NaturalDisaster] Không tìm thấy bất kỳ item nào để sinh nút đối phó!");
             }
         }
 
         /// <summary>
-        /// Xử lý khi người chơi bấm chọn 1 item đối phó:
-        /// - Dừng đếm ngược thời gian ngay lập tức.
-        /// - Ẩn panel chọn item (nhưng VẪN GIỮ naturalDisastersPanel hiển thị phía sau dialog).
-        /// - Kiểm tra xem item đó có đối phó thành công hay thất bại.
-        /// - Hiển thị Dialog thông báo kết quả (Typewriter, bấm Skip để hiện full chữ, có auto-close timer).
-        /// - Khi xác nhận đóng dialog -> Mới tắt naturalDisastersPanel, bật màn đen (Close) và tiếp tục hành trình leo núi.
+        /// Xử lý bấm chọn item:
+        /// - Lần 1: Chọn item đó (highlight viền xanh sáng và phóng to nhẹ). Người chơi có thể tự do bấm chọn item khác để đổi lựa chọn.
+        /// - Lần 2 (bấm lại chính item đang chọn): Xác nhận chốt ngay lập tức mà không cần chờ hết thời gian đếm ngược.
         /// </summary>
-        private void OnItemSelected(string chosenItemId, DisasterSO disaster, Action onResume)
+        private void OnSelectItemClicked(SelectItemHolder holder, DisasterSO disaster, Action onResume)
         {
+            if (_hasChosenItem || holder == null) return;
+
+            // Nếu người chơi bấm lại chính nút đang chọn -> Chốt lựa chọn ngay lập tức!
+            if (_currentSelectedHolder == holder)
+            {
+                Debug.Log($"[NaturalDisaster] ⚡ Người chơi bấm xác nhận chốt ngay item: '{holder.itemId}'");
+                ExecuteDisasterDecision(holder.itemId, disaster, onResume);
+                return;
+            }
+
+            // Đổi lựa chọn sang nút mới
+            _currentSelectedHolder = holder;
+            UpdateSelectItemVisuals();
+            Debug.Log($"[NaturalDisaster] 🔄 Đã đổi chọn item: '{holder.itemId}' (Số lượng: {holder.count}). Bấm lại lần nữa để chốt ngay hoặc đợi hết giờ!");
+        }
+
+        private void UpdateSelectItemVisuals()
+        {
+            Color selectedHighlightColor = new Color(0.2f, 0.9f, 1f, 1f); // Xanh cyan sáng nổi bật
+
+            foreach (var h in _spawnedItemHolders)
+            {
+                if (h == null || h.btnObj == null) continue;
+
+                if (h == _currentSelectedHolder)
+                {
+                    if (h.borderImg != null)
+                    {
+                        h.borderImg.color = selectedHighlightColor;
+                    }
+                    h.btnObj.transform.localScale = h.defaultScale * 1.1f;
+                }
+                else
+                {
+                    if (h.borderImg != null)
+                    {
+                        h.borderImg.color = h.defaultColor;
+                    }
+                    h.btnObj.transform.localScale = h.defaultScale;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Chốt kết quả đối phó thiên tai (gọi khi bấm chốt hoặc khi hết thời gian đếm ngược)
+        /// </summary>
+        private void ExecuteDisasterDecision(string chosenItemId, DisasterSO disaster, Action onResume)
+        {
+            if (_hasChosenItem) return;
             _hasChosenItem = true;
+
             if (_countdownCoroutine != null)
             {
                 StopCoroutine(_countdownCoroutine);
                 _countdownCoroutine = null;
             }
 
-            // 1. Ẩn vùng nút chọn item để tránh người chơi bấm nhiều lần, NHƯNG VẪN GIỮ naturalDisastersPanel hiển thị!
+            // Ẩn vùng nút chọn item
             if (selectItemContainer != null)
             {
                 selectItemContainer.gameObject.SetActive(false);
+            }
+
+            // Đảm bảo panel thiên tai vẫn đang bật
+            if (naturalDisastersPanel != null)
+            {
+                naturalDisastersPanel.SetActive(true);
+            }
+
+            // TRƯỜNG HỢP 0: Người chơi KHÔNG CHỌN BẤT KỲ ITEM NÀO mà hết giờ -> Bị trừ 1 HP!
+            if (string.IsNullOrEmpty(chosenItemId))
+            {
+                if (disasterTimeText != null)
+                {
+                    disasterTimeText.text = "0s";
+                    disasterTimeText.color = _warningRedColor;
+                }
+                string dNameTimeout = (disaster != null) ? disaster.disasterName : "Thiên tai";
+                TakeDamage(1);
+
+                bool hasAnyItems = false;
+                if (stationQuiz != null)
+                {
+                    var inv = stationQuiz.GetInventoryItems();
+                    if (inv != null)
+                    {
+                        foreach (var kvp in inv)
+                        {
+                            if (kvp.Value > 0) { hasAnyItems = true; break; }
+                        }
+                    }
+                }
+
+                if (!hasAnyItems)
+                {
+                    Debug.LogWarning($"[NaturalDisaster] ⚠️ Người chơi không có bất kỳ item nào trong túi đối phó '{dNameTimeout}'! Bị trừ 1 HP!");
+                    ShowFailureDialog(disaster, "", "", false, false, () =>
+                    {
+                        FinishDisasterEventWithBlackScreen(onResume);
+                    }, defaultDialogAutoCloseTime);
+                }
+                else
+                {
+                    Debug.LogWarning($"[NaturalDisaster] ⌛ HẾT THỜI GIAN không kịp chọn item đối phó '{dNameTimeout}'! Bị trừ 1 HP!");
+                    ShowFailureDialog(disaster, "", "", true, true, () =>
+                    {
+                        FinishDisasterEventWithBlackScreen(onResume);
+                    }, defaultDialogAutoCloseTime);
+                }
+                return;
             }
 
             bool isCorrect = IsItemValidForDisaster(chosenItemId, disaster);
@@ -1240,7 +1377,7 @@ namespace QuizGame
 
             if (isCorrect && availableCount > 0)
             {
-                // Chọn ĐÚNG và CÓ ITEM -> Tiêu hao 1 item
+                // Chọn ĐÚNG và CÓ ITEM TRONG TÚI -> Tiêu hao 1 item
                 if (stationQuiz != null)
                 {
                     stationQuiz.ConsumeItem(chosenItemId, 1);
@@ -1254,88 +1391,74 @@ namespace QuizGame
                 {
                     Debug.Log($"[NaturalDisaster] 🎉 ĐỐI PHÓ THÀNH CÔNG thiên tai '{dName}' bằng '{chosenItemId}' (Tỷ lệ: {chance * 100:0.#}%)! Đã tiêu hao 1 item, không bị trừ HP.");
 
-                    // HIỂN THỊ DIALOG THÀNH CÔNG (panel thiên tai vẫn hiển thị phía sau)
                     ShowSuccessDialog(disaster, chosenItemId, itemName, () =>
                     {
-                        // Khi đóng dialog -> MỚI TẮT naturalDisastersPanel và che màn đen
-                        if (naturalDisastersPanel != null)
-                        {
-                            naturalDisastersPanel.SetActive(false);
-                        }
-
-                        CutSceneTransition.Close(onComplete: () =>
-                        {
-                            onResume?.Invoke();
-                        }, duration: 0.22f);
+                        FinishDisasterEventWithBlackScreen(onResume);
                     }, defaultDialogAutoCloseTime);
                 }
                 else
                 {
-                    // Dù chọn đúng vật phẩm nhưng xui xẻo trúng tỷ lệ thất bại (rủi ro ngẫu nhiên) -> Trừ 1 HP!
+                    // Dù chọn đúng vật phẩm nhưng xui xẻo trúng tỷ lệ thất bại -> Trừ 1 HP!
                     TakeDamage(1);
-                    Debug.LogWarning($"[NaturalDisaster] ⚠️ Dù chọn đúng '{chosenItemId}' nhưng không may mắn thất bại theo tỷ lệ rủi ro (Tỷ lệ thành công: {chance * 100:0.#}%)! Đã bị trừ 1 HP.");
+                    Debug.LogWarning($"[NaturalDisaster] ⚠️ Dù chọn đúng '{chosenItemId}' nhưng không may mắn thất bại theo tỷ lệ rủi ro! Đã bị trừ 1 HP.");
 
                     ShowBadLuckFailureDialog(disaster, chosenItemId, itemName, () =>
                     {
-                        if (naturalDisastersPanel != null)
-                        {
-                            naturalDisastersPanel.SetActive(false);
-                        }
-
-                        CutSceneTransition.Close(onComplete: () =>
-                        {
-                            onResume?.Invoke();
-                        }, duration: 0.22f);
+                        FinishDisasterEventWithBlackScreen(onResume);
                     }, defaultDialogAutoCloseTime);
                 }
             }
             else
             {
-                // Chọn SAI hoặc KHÔNG CÓ ITEM
+                // Chọn SAI hoặc CÓ 0 ITEM TRONG TÚI (x0) -> TRỪ 1 HP!
+                TakeDamage(1);
+
                 if (availableCount > 0)
                 {
-                    // Chọn SAI nhưng CÓ ITEM trong túi -> VẪN TIÊU HAO 1 ITEM ĐÃ CHỌN ĐÓ, VÀ TRỪ 1 HP!
+                    // Chọn SAI nhưng CÓ ITEM trong túi -> Tiêu hao 1 item đã chọn đó, trừ 1 HP
                     if (stationQuiz != null)
                     {
                         stationQuiz.ConsumeItem(chosenItemId, 1);
                     }
                     string validListStr = (disaster != null) ? string.Join(", ", disaster.GetAllValidCounterItems()) : "none";
-                    Debug.LogWarning($"[NaturalDisaster] ❌ Chọn SAI item đối phó ('{chosenItemId}' không khắc chế được [{validListStr}])! Đã tiêu hao 1 '{chosenItemId}' và bị trừ 1 HP!");
-                    TakeDamage(1);
+                    Debug.LogWarning($"[NaturalDisaster] ❌ Chọn sai item '{chosenItemId}' (không thể khắc chế [{validListStr}])! Đã tiêu hao 1 item và trừ 1 HP.");
 
-                    // HIỂN THỊ DIALOG THẤT BẠI (panel thiên tai vẫn hiển thị phía sau)
-                    ShowFailureDialog(disaster, chosenItemId, itemName, true, false, () =>
+                    ShowFailureDialog(disaster, chosenItemId, itemName, hasItemInBag: true, isTimeout: false, () =>
                     {
-                        if (naturalDisastersPanel != null)
-                        {
-                            naturalDisastersPanel.SetActive(false);
-                        }
-
-                        CutSceneTransition.Close(onComplete: () =>
-                        {
-                            onResume?.Invoke();
-                        }, duration: 0.22f);
+                        FinishDisasterEventWithBlackScreen(onResume);
                     }, defaultDialogAutoCloseTime);
                 }
                 else
                 {
-                    Debug.LogWarning($"[NaturalDisaster] ⚠️ Item '{chosenItemId}' số lượng bằng 0 (x0)! Bị trừ 1 HP!");
-                    TakeDamage(1);
+                    // Số lượng = 0 trong túi (chọn item x0)
+                    Debug.LogWarning($"[NaturalDisaster] ⚠️ Người chơi chọn item '{chosenItemId}' nhưng số lượng trong túi bằng 0 (x0)! Bị trừ 1 HP do thiếu vật phẩm.");
 
-                    ShowFailureDialog(disaster, chosenItemId, itemName, false, false, () =>
+                    ShowFailureDialog(disaster, chosenItemId, itemName, hasItemInBag: false, isTimeout: false, () =>
                     {
-                        if (naturalDisastersPanel != null)
-                        {
-                            naturalDisastersPanel.SetActive(false);
-                        }
-
-                        CutSceneTransition.Close(onComplete: () =>
-                        {
-                            onResume?.Invoke();
-                        }, duration: 0.22f);
+                        FinishDisasterEventWithBlackScreen(onResume);
                     }, defaultDialogAutoCloseTime);
                 }
             }
+        }
+
+        /// <summary>
+        /// Kết thúc sự kiện thiên tai:
+        /// 1. Bật màn đen che kín màn hình trước (CutSceneTransition.Close).
+        /// 2. Khi màn hình ĐÃ ĐEN HOÀN TOÀN (onComplete) -> Mới tắt ngầm naturalDisastersPanel và Dialog.
+        /// 3. Tiếp tục hành trình leo núi (onResume) ngầm dưới màn đen.
+        /// </summary>
+        private void FinishDisasterEventWithBlackScreen(Action onResume)
+        {
+            CutSceneTransition.Close(onComplete: () =>
+            {
+                if (naturalDisastersPanel != null)
+                {
+                    naturalDisastersPanel.SetActive(false);
+                }
+                HideAllDialogs();
+
+                onResume?.Invoke();
+            }, duration: 0.25f);
         }
     }
 }

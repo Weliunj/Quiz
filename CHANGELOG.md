@@ -22,6 +22,25 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-24 17:45] — fix(disaster): strictly display only owned items (quantity > 0) in SelectItemContainer
+- **Tác vụ**:
+  - **Chỉ hiển thị các vật phẩm đang sở hữu trong túi (`count > 0`) (`NaturalDisasterController.cs`)**:
+    - Khôi phục kiểm tra `if (count <= 0) continue;` trong `PopulateSelectItems`.
+    - Loại bỏ hoàn toàn các vật phẩm có số lượng bằng 0 (`x0`), chỉ sinh nút cho các vật phẩm người chơi thực sự sở hữu trong túi đồ.
+    - Nếu người chơi không có bất kỳ vật phẩm nào trong túi (`spawnedCount == 0`), hệ thống sẽ thông báo rõ: *"Túi đồ của bạn không có bất kỳ vật phẩm nào để đối phó..."* khi hết thời gian.
+  - **Cơ chế chọn và tự do đổi vật phẩm đối phó (`NaturalDisasterController.cs`)**:
+    - Khi bấm vào 1 vật phẩm: nút vật phẩm đó được highlight viền xanh sáng và phóng to nhẹ (`scale 1.1x`).
+    - Người chơi có thể tự do bấm sang vật phẩm khác bất kỳ lúc nào để đổi lựa chọn trong suốt thời gian đếm ngược.
+    - Bấm lại lần 2 vào chính vật phẩm đang chọn: xác nhận chốt ngay lập tức mà không cần chờ hết giờ.
+    - Khi đếm ngược hết giờ (0s): hệ thống tự động chốt theo vật phẩm đang được chọn (hoặc timeout trừ 1 HP nếu chưa chọn bất kỳ vật phẩm nào).
+  - **Màn đen che kín trước rồi mới tắt ngầm sự kiện thiên tai (`NaturalDisasterController.cs`)**:
+    - Viết lại quy trình kết thúc sự kiện `FinishDisasterEventWithBlackScreen`: khi bấm "Tiếp tục" ở Dialog kết quả, panel sự kiện và dialog vẫn được giữ nguyên hiển thị trên màn hình.
+    - Màn đen `CutSceneTransition.Close` kéo xuống che kín 100% màn hình trước.
+    - Chỉ khi màn hình đã đen hoàn toàn (`onComplete`), hệ thống mới tắt ngầm `naturalDisastersPanel.SetActive(false)` và `HideAllDialogs()`, sau đó player tiếp tục leo núi ngầm dưới màn đen. Loại bỏ triệt để hiện tượng chớp tắt giao diện trước khi màn đen phủ xuống.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/NaturalDisasterController.cs` (Dòng 104-125, 541-545, 800-815, 915-945, 1130-1370)
+- **Ảnh hưởng**: Trải nghiệm chọn vật phẩm tương tác linh hoạt mượt mà; chuyển cảnh che đen mượt tuyệt đối, không lộ cảnh hay tắt phụt giao diện.
+
 ### [2026-10-24 17:00] — feat(ui & gameplay): configurable event countdown time and warning red timer text when remaining <= 3s
 - **Tác vụ**:
   - **Cấu hình thời gian đối phó riêng cho từng sự kiện thiên tai (`DisasterSO.cs` & `NaturalDisasterController.cs`)**:
