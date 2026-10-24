@@ -22,6 +22,23 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-24 11:47] — fix(import-ui): support inline options on single line, auto-repair malformed questions, and format correctText to show only answer content
+- **Tác vụ**:
+  - **Hỗ trợ phân tích đáp án viết trên cùng 1 dòng (`EditMapPanelUI.cs`)**:
+    - Nâng cấp bộ phân tích `ParseQuestionsFromText` bằng Regex `OptionPattern` để trích xuất chuẩn xác các đáp án A, B, C, D kể cả khi tất cả 4 đáp án nằm trên cùng 1 dòng (ví dụ `A. 6 + 3 * B. 7 + 3 C. 5 + 4 D. 8 + 1` hoặc `* A. 9 B. 8 C. 7 D. 10`).
+    - Hỗ trợ nhận diện dấu `*` ở mọi vị trí (`* B.`, `*B.`, `B*.`, `B.*`, `B. *...`) để xác định đúng đáp án đúng.
+  - **Tự động sửa lỗi câu hỏi cũ (`TryRepairMalformedQuestion`)**:
+    - Tự động phát hiện và bóc tách các câu hỏi trước đây bị dồn toàn bộ đáp án vào ô `option1` khi nạp danh sách hoặc bấm chỉnh sửa câu hỏi.
+    - Đã chạy sửa chữa toàn bộ 15 câu hỏi bị lỗi trong file lưu trữ `quiz_save.json`.
+  - **Định dạng lại hiển thị của `correctText` (`QuestionItemUI.cs`)**:
+    - Hiển thị theo định dạng `Đáp án: {correctAns}` (ví dụ: `Đáp án: 7 + 3`), lược bỏ tiền tố chữ cái `A.`/`B.` để người dùng thấy rõ nội dung đáp án đúng.
+    - Thêm trường `[SerializeField] private bool showOptionLetter = false` để tùy chỉnh nếu muốn hiển thị lại chữ cái.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+  - `Assets/Scripts/QuestionItemUI.cs`
+- **Ảnh hưởng**: Khi import file text có các đáp án trên cùng 1 dòng, 4 ô đáp án A, B, C, D trong form tạo/sửa câu hỏi được điền đầy đủ và đáp án đúng được đưa về ô A màu xanh; thẻ câu hỏi trong danh sách hiển thị tên đáp án đúng rõ ràng, sạch đẹp.
+
+
 ### [2026-10-17 22:45] — refactor(disaster): remove fallback loading & disasterList from Inspector, populate bad luck text in SOs
 - **Tác vụ**:
   - **Xóa bỏ fallback và danh sách thiên tai dự phòng trên Inspector (`NaturalDisasterController.cs`)**:

@@ -1013,6 +1013,13 @@ namespace QuizGame
 
             if (currentMap == null || currentMap.questions == null) return;
 
+            bool anyRepaired = false;
+            for (int i = 0; i < currentMap.questions.Count; i++)
+            {
+                if (TryRepairMalformedQuestion(currentMap.questions[i])) anyRepaired = true;
+            }
+            if (anyRepaired) SaveData();
+
             for (int i = 0; i < currentMap.questions.Count; i++)
             {
                 QuestionData q = currentMap.questions[i];
@@ -1073,6 +1080,8 @@ namespace QuizGame
                 Debug.LogWarning("[EditMapPanelUI] Hãy chọn một câu hỏi để chỉnh sửa!");
                 return;
             }
+
+            if (TryRepairMalformedQuestion(selectedQuestion)) SaveData();
 
             // Nạp dữ liệu vào ô input
             editingQuestion = selectedQuestion;
@@ -1433,29 +1442,32 @@ namespace QuizGame
                         continue;
                     }
 
-                    // Kiểm tra các dòng lựa chọn A, B, C, D (chỉ cần thêm dấu * trước hoặc sau đáp án đúng)
-                    if (IsOptionLine(line, 'A', out string textA, out bool isStarA))
+                    // Kiểm tra các lựa chọn A, B, C, D (hỗ trợ cả viết trên cùng 1 dòng lẫn chia nhiều dòng)
+                    var optMatches = OptionPattern.Matches(line);
+                    if (optMatches.Count > 0)
                     {
-                        optA = textA;
-                        if (isStarA) correctIdx = 0;
-                        continue;
-                    }
-                    if (IsOptionLine(line, 'B', out string textB, out bool isStarB))
-                    {
-                        optB = textB;
-                        if (isStarB) correctIdx = 1;
-                        continue;
-                    }
-                    if (IsOptionLine(line, 'C', out string textC, out bool isStarC))
-                    {
-                        optC = textC;
-                        if (isStarC) correctIdx = 2;
-                        continue;
-                    }
-                    if (IsOptionLine(line, 'D', out string textD, out bool isStarD))
-                    {
-                        optD = textD;
-                        if (isStarD) correctIdx = 3;
+                        for (int i = 0; i < optMatches.Count; i++)
+                        {
+                            var m = optMatches[i];
+                            int start = m.Index + m.Length;
+                            int end = (i + 1 < optMatches.Count) ? optMatches[i + 1].Index : line.Length;
+                            string optContent = line.Substring(start, end - start).Trim();
+                            string mStr = m.Value.ToUpper();
+
+                            char letter = 'A';
+                            for (int c = 0; c < mStr.Length; c++)
+                            {
+                                if (mStr[c] >= 'A' && mStr[c] <= 'D') { letter = mStr[c]; break; }
+                            }
+                            int idx = letter - 'A';
+                            bool isStar = mStr.Contains("*") || optContent.StartsWith("*") || optContent.EndsWith("*");
+                            optContent = optContent.Trim('*').Trim();
+
+                            if (idx == 0) { optA = optContent; if (isStar) correctIdx = 0; }
+                            else if (idx == 1) { optB = optContent; if (isStar) correctIdx = 1; }
+                            else if (idx == 2) { optC = optContent; if (isStar) correctIdx = 2; }
+                            else if (idx == 3) { optD = optContent; if (isStar) correctIdx = 3; }
+                        }
                         continue;
                     }
 
@@ -1482,6 +1494,63 @@ namespace QuizGame
             }
 
             return list;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex OptionPattern =
+            new System.Text.RegularExpressions.Regex(@"(?i)(?:^|[\s\t])(\*?\s*([A-D])\s*[\.\)\:\-]\s*|\*\s*([A-D])\s*[\.\)\:\-]\s*|([A-D])\*\s*[\.\)\:\-]\s*)");
+
+        /// <summary>
+        /// Tự động sửa các câu hỏi bị lỗi do dồn tất cả đáp án A, B, C, D vào ô option1
+        /// </summary>
+        public static bool TryRepairMalformedQuestion(QuestionData q)
+        {
+            if (q == null) return false;
+            if (string.IsNullOrEmpty(q.option2) && string.IsNullOrEmpty(q.option3) && !string.IsNullOrEmpty(q.option1))
+            {
+                string textToParse = q.option1.Trim();
+                if (!OptionPattern.IsMatch(textToParse.Substring(0, Mathf.Min(8, textToParse.Length))))
+                {
+                    textToParse = "A. " + textToParse;
+                }
+
+                var matches = OptionPattern.Matches(textToParse);
+                if (matches.Count >= 2)
+                {
+                    string a = "", b = "", c = "", d = "";
+                    int foundCorrect = q.correctIndex;
+
+                    for (int i = 0; i < matches.Count; i++)
+                    {
+                        var m = matches[i];
+                        int start = m.Index + m.Length;
+                        int end = (i + 1 < matches.Count) ? matches[i + 1].Index : textToParse.Length;
+                        string optContent = textToParse.Substring(start, end - start).Trim();
+                        string mStr = m.Value.ToUpper();
+
+                        char letter = 'A';
+                        for (int k = 0; k < mStr.Length; k++)
+                        {
+                            if (mStr[k] >= 'A' && mStr[k] <= 'D') { letter = mStr[k]; break; }
+                        }
+                        int idx = letter - 'A';
+                        bool isStar = mStr.Contains("*") || optContent.StartsWith("*") || optContent.EndsWith("*");
+                        optContent = optContent.Trim('*').Trim();
+
+                        if (idx == 0) { a = optContent; if (isStar) foundCorrect = 0; }
+                        else if (idx == 1) { b = optContent; if (isStar) foundCorrect = 1; }
+                        else if (idx == 2) { c = optContent; if (isStar) foundCorrect = 2; }
+                        else if (idx == 3) { d = optContent; if (isStar) foundCorrect = 3; }
+                    }
+
+                    q.option1 = a;
+                    q.option2 = b;
+                    q.option3 = c;
+                    q.option4 = d;
+                    q.correctIndex = foundCorrect;
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static bool IsOptionLine(string line, char letter, out string content, out bool isStar)

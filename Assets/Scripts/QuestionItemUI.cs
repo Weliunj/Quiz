@@ -33,6 +33,10 @@ namespace QuizGame
         [Tooltip("Tự động bật chế độ Overflow = Ellipsis trên TextMeshPro để tự hiện '...' khi chữ dài quá khung")]
         [SerializeField] private bool autoEnableTmpEllipsis = true;
 
+        [Header("--- HIỂN THỊ ĐÁP ÁN ĐÚNG ---")]
+        [Tooltip("Hiển thị thêm chữ cái A/B/C/D trước đáp án đúng (Mặc định false: chỉ hiện 'Đáp án: [Nội dung]')")]
+        [SerializeField] private bool showOptionLetter = false;
+
         public QuestionData Data { get; private set; }
         private Action<QuestionData, QuestionItemUI> onClickCallback;
 
@@ -147,13 +151,14 @@ namespace QuizGame
                     correctAns = correctAns.Substring(0, maxAnswerLength) + "...";
                 }
 
+                string ansDisplay = showOptionLetter ? $"{(char)('A' + idx)}. {correctAns}" : correctAns;
                 if (timeText != null)
                 {
-                    correctText.text = $"Đáp án: {(char)('A' + idx)}. {correctAns}";
+                    correctText.text = $"Đáp án: {ansDisplay}";
                 }
                 else
                 {
-                    correctText.text = $"Đáp án: {(char)('A' + idx)}. {correctAns} | <color=#FFD54F>⏱ {qTime:0}s</color>";
+                    correctText.text = $"Đáp án: {ansDisplay} | <color=#FFD54F>⏱ {qTime:0}s</color>";
                 }
             }
 
