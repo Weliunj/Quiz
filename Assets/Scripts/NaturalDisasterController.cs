@@ -96,6 +96,8 @@ namespace QuizGame
         private List<GameObject> _activeHearts = new List<GameObject>();
         private Coroutine _countdownCoroutine;
         private bool _hasChosenItem = false;
+        private Color _defaultDisasterTimeColor = Color.white;
+        private readonly Color _warningRedColor = new Color(0.95f, 0.25f, 0.25f, 1f);
         private Coroutine _typewriterCoroutine;
         private Coroutine _autoCloseCoroutine;
         private bool _isTyping = false;
@@ -186,6 +188,10 @@ namespace QuizGame
                 {
                     Transform timeT = naturalDisastersPanel.transform.Find("Time");
                     if (timeT != null) disasterTimeText = timeT.GetComponent<TMP_Text>();
+                }
+                if (disasterTimeText != null && (disasterTimeText.color.r < 0.85f || disasterTimeText.color.g > 0.35f || disasterTimeText.color.b > 0.35f))
+                {
+                    _defaultDisasterTimeColor = disasterTimeText.color;
                 }
 
                 if (selectItemContainer == null)
@@ -278,6 +284,10 @@ namespace QuizGame
             {
                 theme = FindThemeById(mapData.themeId);
             }
+            if (theme == null)
+            {
+                theme = FindAnyTheme();
+            }
 
             if (theme != null && theme.themeDisasters != null && theme.themeDisasters.Count > 0)
             {
@@ -309,6 +319,19 @@ namespace QuizGame
                 if (tSO != null && tSO.themeId == themeId) return tSO;
             }
 #endif
+            return null;
+        }
+
+        private ThemeSO FindAnyTheme()
+        {
+            ThemeSO[] loaded = Resources.FindObjectsOfTypeAll<ThemeSO>();
+            if (loaded != null && loaded.Length > 0)
+            {
+                foreach (var t in loaded)
+                {
+                    if (t != null) return t;
+                }
+            }
             return null;
         }
 
@@ -845,7 +868,14 @@ namespace QuizGame
                 // Sinh các nút chọn item (CHỈ HIỆN ITEM CÓ SỐ LƯỢNG > 0)
                 PopulateSelectItems(chosenDisaster, onResume);
 
-                // Khởi động đếm ngược thời gian (10s)
+                // Khởi động đếm ngược thời gian theo cấu hình thiên tai (hoặc fallback mặc định)
+                float initialTime = (chosenDisaster != null && chosenDisaster.countdownTime > 0f) ? chosenDisaster.countdownTime : disasterCountdown;
+                if (disasterTimeText != null)
+                {
+                    disasterTimeText.text = $"{Mathf.CeilToInt(initialTime)}s";
+                    disasterTimeText.color = (initialTime <= 3.05f) ? _warningRedColor : _defaultDisasterTimeColor;
+                }
+
                 if (_countdownCoroutine != null)
                 {
                     StopCoroutine(_countdownCoroutine);
@@ -857,13 +887,24 @@ namespace QuizGame
         private IEnumerator CoDisasterCountdown(DisasterSO disaster, Action onResume)
         {
             _hasChosenItem = false;
-            float timeLeft = disasterCountdown;
+            float timeLeft = (disaster != null && disaster.countdownTime > 0f) ? disaster.countdownTime : disasterCountdown;
 
             while (timeLeft > 0f)
             {
                 if (disasterTimeText != null)
                 {
-                    disasterTimeText.text = Mathf.CeilToInt(timeLeft).ToString();
+                    int sec = Mathf.CeilToInt(timeLeft);
+                    disasterTimeText.text = $"{sec}s";
+
+                    // Đổi sang màu đỏ cảnh báo khi thời gian còn <= 3 giây
+                    if (timeLeft <= 3.05f)
+                    {
+                        disasterTimeText.color = _warningRedColor;
+                    }
+                    else
+                    {
+                        disasterTimeText.color = _defaultDisasterTimeColor;
+                    }
                 }
 
                 yield return new WaitForSeconds(1f);
@@ -875,7 +916,11 @@ namespace QuizGame
             if (_hasChosenItem) yield break;
 
             // HẾT THỜI GIAN -> BỊ TRỪ 1 HP!
-            if (disasterTimeText != null) disasterTimeText.text = "0";
+            if (disasterTimeText != null)
+            {
+                disasterTimeText.text = "0s";
+                disasterTimeText.color = _warningRedColor;
+            }
             string dName = (disaster != null) ? disaster.disasterName : "Thiên tai";
             Debug.LogWarning($"[NaturalDisaster] ⌛ HẾT THỜI GIAN đối phó thiên tai '{dName}'! Bị trừ 1 HP!");
             TakeDamage(1);

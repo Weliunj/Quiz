@@ -22,6 +22,68 @@ Khi hoàn thành bất kỳ tính năng (`feat`), sửa lỗi (`fix`), tái cấ
 
 ## 📋 Nhật Ký Thay Đổi
 
+### [2026-10-24 17:00] — feat(ui & gameplay): configurable event countdown time and warning red timer text when remaining <= 3s
+- **Tác vụ**:
+  - **Cấu hình thời gian đối phó riêng cho từng sự kiện thiên tai (`DisasterSO.cs` & `NaturalDisasterController.cs`)**:
+    - Thêm trường `countdownTime` vào `DisasterSO` (mặc định 10s, có thể tinh chỉnh linh hoạt theo từng sự kiện trong Inspector như Bão tuyết 10s, Sạt lở 8s, Gấu 12s...).
+    - `NaturalDisasterController` tự động ưu tiên nạp `countdownTime` của thiên tai đang diễn ra (hoặc fallback về `disasterCountdown = 10s`).
+    - Hiển thị đúng số giây khởi tạo ban đầu lên `disasterTimeText` ngay khi panel thiên tai xuất hiện.
+  - **Đổi màu chữ đếm ngược sang ĐỎ cảnh báo khi thời gian còn <= 3 giây**:
+    - **Tại các sự kiện thiên tai (`NaturalDisasterController.cs`)**:
+      - Tự động lưu màu mặc định của `disasterTimeText`.
+      - Khi đếm ngược thời gian còn `<= 3` giây: `disasterTimeText.color` chuyển sang màu đỏ rực cảnh báo (`#F24040`), tạo cảm giác hồi hộp khẩn cấp cho người chơi.
+      - Khi thời gian `> 3s`: giữ nguyên màu mặc định (trắng).
+      - Khi hết giờ (0s): giữ màu đỏ cảnh báo.
+    - **Tại câu hỏi đố vui ở các trạm (`StationQuizController.cs`)**:
+      - Tự động lưu màu gốc `defaultTimeTextColor` của `timeText`.
+      - Khi đếm ngược `currentTimeLeft <= 3` giây: `timeText.color` chuyển sang màu đỏ rực cảnh báo `timeWarningColor`.
+      - Khi bấm nút `SkipTimeBtn` (nhảy xuống 3s): `timeText` lập tức đổi sang số `3` và mang màu đỏ cảnh báo.
+      - Khi chuyển sang câu hỏi mới: `timeText` tự động khôi phục về màu mặc định (trắng) nếu câu hỏi có thời gian > 3s.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/DisasterSO.cs` (Dòng 34-37)
+  - `Assets/Scripts/NaturalDisasterController.cs` (Dòng 99-100, 189-192, 863-875, 874-904)
+  - `Assets/Scripts/StationQuizController.cs` (Dòng 186-189, 1289, 1295-1296, 1307-1324, 1332-1337)
+- **Ảnh hưởng**: Tăng tính hồi hộp, thị giác trực quan rõ ràng báo hiệu sắp hết giờ cho cả câu hỏi và sự kiện thiên tai; cho phép tùy biến thời gian thử thách riêng cho từng loại thiên tai trong game.
+
+### [2026-10-24 16:45] — feat(ui & quiz): hide answered/failed station items completely and add clear-all questions button in edit map panel
+- **Tác vụ**:
+  - **Tắt bỏ hoàn toàn item đã trả lời (đúng/sai/hết giờ) thay vì để mờ (`StationQuizController.cs`)**:
+    - Khi người chơi chọn trả lời item tại trạm: nếu trả lời đúng (`HandleCorrectAnswer`), trả lời sai (`HandleWrongAnswer`), hoặc để hết giờ (`HandleTimeout`), nút item đó sẽ lập tức biến mất hoàn toàn (`SetActive(false)` và loại khỏi danh sách item đang hiển thị).
+    - Lưu trữ trạng thái `isAnsweredCorrect` và `isAnsweredWrong` vào `stationItemsState`. Khi người chơi rời trạm rồi quay lại, các item này vẫn bị ẩn hoàn toàn (`btnObj.SetActive(false)`).
+    - Trong hàm `ReduceRemainingCount()`: khi trạm hết 3 lượt (0/3), các item đã trả lời (đúng hoặc sai) luôn giữ trạng thái ẩn tắt bỏ, chỉ làm mờ (`alpha = 0.45f`) và khóa tương tác các item còn lại chưa từng được chọn.
+  - **Thêm nút "Xóa tất cả" (Clear All Questions) trong Tab Danh Sách Câu Hỏi (`EditMapPanelUI.cs`)**:
+    - Thêm trường `clearAllQuestBtn` và hàm xử lý `OnClearAllQuestionsClicked()` xóa sạch danh sách `currentMap.questions.Clear()`, lưu dữ liệu và làm mới giao diện ngay lập tức.
+    - Thêm hàm `EnsureClearAllButtonExists()`: tự động phát hiện hoặc clone nút từ `DeleteQuest` với màu sắc đỏ cam phân biệt và vị trí đối xứng cân đối bên cạnh các nút `DeleteQuest` và `EditQuestBtn`.
+    - Tự động bật/tắt (interactable) nút "Xóa tất cả" tương ứng theo việc map hiện tại có hay không có câu hỏi (`RefreshListUI`, `ClearInputs`).
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/StationQuizController.cs` (Dòng 1060-1064, 1460-1530, 1565-1577)
+  - `Assets/Scripts/EditMapPanelUI.cs` (Dòng 122, 433, 589-594, 1066, 1270-1318, 1339)
+- **Ảnh hưởng**: Trải nghiệm trạm dừng gọn gàng rõ ràng (vật phẩm đã chơi dù đúng hay sai đều biến mất, không còn gây rối mắt); giáo viên/người chơi dễ dàng dọn sạch bộ câu hỏi cũ trong map chỉ bằng 1 cú click.
+
+### [2026-10-24 16:25] — fix(quiz & build): support bullet points (•) in import parser and fix standalone build station items & theme loading
+- **Tác vụ**:
+  - **Hỗ trợ toàn diện dấu bullet point (`•`, `●`, `✔`, `*`...) khi import câu hỏi (`EditMapPanelUI.cs`)**:
+    - Mở rộng regex `OptionPattern` và hàm phân tích `ParseQuestionsFromText` nhận diện tất cả các ký tự đánh dấu đáp án đúng phổ biến khi copy từ AI (như `• B. x = 37`, `* B.`, `✔ B.`...):
+      - Nhận diện đúng vị trí dấu bullet đứng trước chữ cái phương án (`• B.`) hoặc ở đầu dòng.
+      - Gán chính xác `correctIndex` theo phương án được đánh dấu (không còn bị mặc định về A dẫn đến câu 13 bị sai và trừ 1 HP).
+      - Tự động làm sạch các ký tự đánh dấu (`•`, `*`) khỏi nội dung đáp án hiển thị.
+    - Thêm phương thức `SanitizeQuestion(QuestionData)` và gọi tự động khi khởi tạo map trong `StationQuizController.cs` để tự động sửa các câu hỏi đã import từ trước nếu còn sót ký tự `•`.
+    - Cập nhật văn bản mẫu `DEFAULT_IMPORT_GUIDE` minh họa rõ ràng dấu `•` và `*`.
+  - **Khắc phục lỗi chạy trên BUILD bị 5 item giống hệt nhau là `item_bearspray` (`StationQuizController.cs` & `SampleScene.unity`)**:
+    - **Nguyên nhân**: Trong Scene `SampleScene.unity`, `StationQuizController.availableThemes` bị rỗng (`[]`). Khi chạy trong Unity Editor, hàm nạp dùng `#if UNITY_EDITOR` với `AssetDatabase` để nạp theme nên hoạt động bình thường; nhưng khi xuất **BUILD**, `#if UNITY_EDITOR` bị loại bỏ khiến `availableThemes` rỗng, dẫn đến không tìm thấy theme, fallback về chuỗi rỗng `item_bearspray` và hiển thị sprite mặc định của prefab.
+    - **Giải pháp**:
+      - Gán trực tiếp asset `SnowMountain.asset` vào `availableThemes` của `StationQuizController` trong `SampleScene.unity` để Unity tự động đóng gói theme vào file Build.
+      - Thêm hàm `EnsureThemesLoaded()` hoạt động độc lập không phụ thuộc Editor: tự động tìm kiếm `ThemeSO` qua `Resources.FindObjectsOfTypeAll<ThemeSO>()` và mượn tham chiếu từ các component trong scene (`MountainBackground`, `EditMapPanelUI`).
+      - Cải tiến hàm sinh item `GenerateRandomItemsForStation(count)`: phân bổ theo cơ chế pool không trùng lặp từ `matchedTheme.themeItems` (hoặc quét toàn bộ `ItemSO`), giúp các trạm có đầy đủ các vật phẩm phong phú (Bình xịt cay, Thịt, Lửa trại, Dây neo, Lều...) thay vì trùng 5 bình xịt cay.
+      - Thêm hàm `GetFriendlyItemName` chuyển đổi tên hiển thị tiếng Việt thân thiện thay vì hiển thị mã raw `item_bearspray`.
+- **Danh sách file thay đổi**:
+  - `Assets/Scripts/EditMapPanelUI.cs`
+  - `Assets/Scripts/StationQuizController.cs`
+  - `Assets/Scripts/MountainBackground.cs`
+  - `Assets/Scripts/NaturalDisasterController.cs`
+  - `Assets/Scenes/SampleScene.unity`
+- **Ảnh hưởng**: Người chơi import đề thi từ AI có dấu bullet `•` nhận diện chuẩn 100% đáp án đúng; game khi Build độc lập hiển thị đầy đủ icon và tên tiếng Việt của các item đa dạng theo theme.
+
 ### [2026-10-24 12:18] — fix(ui): enable multi-line wrapping and readable auto-sizing for question and answer inputs
 - **Tác vụ**:
   - **Khắc phục tình trạng câu hỏi dài bị ép trên 1 dòng duy nhất và chữ bị co nhỏ tí hon**:

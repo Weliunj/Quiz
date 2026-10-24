@@ -31,6 +31,10 @@ namespace QuizGame
         [Range(0f, 1f)]
         public float successChance = 1f;
 
+        [Header("--- THỜI GIAN ĐỐI PHÓ (GIÂY) ---")]
+        [Tooltip("Thời gian đếm ngược đối phó thiên tai này (giây, mặc định 10s, nếu <= 0 sẽ dùng thời gian mặc định của hệ thống)")]
+        public float countdownTime = 10f;
+
         [Header("--- THÔNG ĐIỆP DIALOG CHO THIÊN TAI NÀY ---")]
         [TextArea(2, 4)]
         [Tooltip("Nội dung cảnh báo khi thiên tai xuất hiện (để trống sẽ dùng mặc định. Hỗ trợ thẻ {disaster})")]

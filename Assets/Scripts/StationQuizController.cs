@@ -101,8 +101,8 @@ namespace QuizGame
             public string itemId;
             public string displayName;
             public Sprite icon;
-            public bool isAnsweredCorrect = false; // Đã đúng -> ẩn
-            public bool isAnsweredWrong = false;   // Đã sai -> làm mờ
+            public bool isAnsweredCorrect = false; // Đã đúng -> ẩn hoàn toàn
+            public bool isAnsweredWrong = false;   // Đã trả lời sai/hết giờ -> ẩn hoàn toàn (không để mờ)
             public Button runtimeBtn;
         }
 
@@ -182,6 +182,10 @@ namespace QuizGame
                 {
                     Transform t = FindChildRecursive(questPanel.transform, "TimeText", "TimerText", "Time");
                     if (t != null) timeText = t.GetComponent<TMP_Text>();
+                }
+                if (timeText != null && (timeText.color.r < 0.85f || timeText.color.g > 0.35f || timeText.color.b > 0.35f))
+                {
+                    defaultTimeTextColor = timeText.color;
                 }
 
                 if (skipTimeBtn == null)
@@ -307,6 +311,12 @@ namespace QuizGame
 
             if (map != null && map.questions != null)
             {
+                // Tự động kiểm tra và làm sạch dấu bullet • hoặc * còn sót lại trong options nếu có
+                foreach (var q in map.questions)
+                {
+                    EditMapPanelUI.SanitizeQuestion(q);
+                }
+
                 poolQuestions.AddRange(map.questions);
                 unusedQuestions.AddRange(map.questions);
             }
@@ -318,18 +328,53 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Khởi tạo danh sách Item theo Theme lên MainPanel UI
+        /// Đảm bảo danh sách ThemeSO luôn được nạp đầy đủ (hoạt động tốt cả trong Editor lẫn khi Build)
         /// </summary>
-        private void InitThemeInventory(MapData map)
+        public void EnsureThemesLoaded()
         {
-            inventoryItems.Clear();
-            itemQuantityTexts.Clear();
-            itemDataLookup.Clear();
+            if (availableThemes == null) availableThemes = new List<ThemeSO>();
 
-            // Tự động load ThemeSO nếu chưa gán trong Inspector
-            if (availableThemes == null || availableThemes.Count == 0)
+            // 1. Quét từ bộ nhớ đã nạp / Resources (hoạt động trong standalone BUILD)
+            if (availableThemes.Count == 0)
             {
+                ThemeSO[] loaded = Resources.FindObjectsOfTypeAll<ThemeSO>();
+                if (loaded != null && loaded.Length > 0)
+                {
+                    foreach (var t in loaded)
+                    {
+                        if (t != null && !availableThemes.Contains(t)) availableThemes.Add(t);
+                    }
+                }
+            }
+
+            // 2. Mượn tham chiếu từ MountainBackground hoặc EditMapPanelUI trong Scene nếu có
+            if (availableThemes.Count == 0)
+            {
+                var bg = FindObjectOfType<MountainBackground>();
+                if (bg != null && bg.AvailableThemes != null && bg.AvailableThemes.Count > 0)
+                {
+                    foreach (var t in bg.AvailableThemes)
+                    {
+                        if (t != null && !availableThemes.Contains(t)) availableThemes.Add(t);
+                    }
+                }
+            }
+
+            if (availableThemes.Count == 0)
+            {
+                var editUI = FindObjectOfType<EditMapPanelUI>();
+                if (editUI != null && editUI.AvailableThemes != null && editUI.AvailableThemes.Count > 0)
+                {
+                    foreach (var t in editUI.AvailableThemes)
+                    {
+                        if (t != null && !availableThemes.Contains(t)) availableThemes.Add(t);
+                    }
+                }
+            }
+
 #if UNITY_EDITOR
+            if (availableThemes.Count == 0)
+            {
                 string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ThemeSO");
                 foreach (var g in guids)
                 {
@@ -340,14 +385,33 @@ namespace QuizGame
                         availableThemes.Add(tSO);
                     }
                 }
-#endif
             }
+#endif
+        }
 
-            // Tìm ThemeSO khớp với themeId của map
+        /// <summary>
+        /// Khởi tạo danh sách Item theo Theme lên MainPanel UI
+        /// </summary>
+        private void InitThemeInventory(MapData map)
+        {
+            inventoryItems.Clear();
+            itemQuantityTexts.Clear();
+            itemDataLookup.Clear();
+
+            EnsureThemesLoaded();
+
+            // Tìm ThemeSO khớp với themeId của map (hoặc fallback lấy theme đầu tiên)
             ThemeSO matchedTheme = null;
-            if (availableThemes != null && map != null)
+            if (availableThemes != null && availableThemes.Count > 0)
             {
-                matchedTheme = availableThemes.Find(t => t != null && t.themeId == map.themeId);
+                if (map != null && !string.IsNullOrEmpty(map.themeId))
+                {
+                    matchedTheme = availableThemes.Find(t => t != null && t.themeId == map.themeId);
+                }
+                if (matchedTheme == null)
+                {
+                    matchedTheme = availableThemes[0];
+                }
             }
 
             if (matchedTheme != null && matchedTheme.themeItems != null && matchedTheme.themeItems.Count > 0)
@@ -364,14 +428,33 @@ namespace QuizGame
             }
             else
             {
-                // Fallback nếu chưa tạo ThemeSO
-                List<string> items = (map != null && map.itemIds != null && map.itemIds.Count > 0)
-                    ? map.itemIds
-                    : new List<string>() { "item_1", "item_2", "item_3" };
-
-                foreach (var id in items)
+                // Quét toàn bộ ItemSO có trong game để nạp vào lookup
+                ItemSO[] allItems = Resources.FindObjectsOfTypeAll<ItemSO>();
+                if (allItems != null && allItems.Length > 0)
                 {
-                    inventoryItems[id] = 0;
+                    foreach (var itemSO in allItems)
+                    {
+                        if (itemSO != null)
+                        {
+                            string id = string.IsNullOrEmpty(itemSO.itemId) ? itemSO.name : itemSO.itemId;
+                            if (!inventoryItems.ContainsKey(id))
+                            {
+                                inventoryItems[id] = 0;
+                                itemDataLookup[id] = itemSO;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    List<string> items = (map != null && map.itemIds != null && map.itemIds.Count > 0)
+                        ? map.itemIds
+                        : new List<string>() { "item_bearspray", "item_meat", "item_campfire", "item_snowanchor", "item_emergencytent" };
+
+                    foreach (var id in items)
+                    {
+                        inventoryItems[id] = 0;
+                    }
                 }
             }
 
@@ -703,9 +786,17 @@ namespace QuizGame
         public List<ItemSO> GetCurrentThemeItems()
         {
             List<ItemSO> list = new List<ItemSO>();
-            if (availableThemes != null && currentMap != null)
+            EnsureThemesLoaded();
+
+            if (availableThemes != null && availableThemes.Count > 0)
             {
-                ThemeSO matched = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+                ThemeSO matched = null;
+                if (currentMap != null && !string.IsNullOrEmpty(currentMap.themeId))
+                {
+                    matched = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+                }
+                if (matched == null) matched = availableThemes[0];
+
                 if (matched != null && matched.themeItems != null)
                 {
                     list.AddRange(matched.themeItems);
@@ -714,6 +805,11 @@ namespace QuizGame
             if (list.Count == 0 && itemDataLookup != null)
             {
                 list.AddRange(itemDataLookup.Values);
+            }
+            if (list.Count == 0)
+            {
+                ItemSO[] all = Resources.FindObjectsOfTypeAll<ItemSO>();
+                if (all != null && all.Length > 0) list.AddRange(all);
             }
             return list;
         }
@@ -962,14 +1058,14 @@ namespace QuizGame
                 }
 
                 // Áp dụng trạng thái đã lưu:
-                // 1. Đã trả lời ĐÚNG -> biến mất
-                // 2. Đã trả lời SAI hoặc HẾT LƯỢT TRẠM (0/3) -> làm mờ, khóa tương tác
+                // 1. Đã trả lời (ĐÚNG hoặc SAI) -> TẮT BỎ LUÔN (không để mờ)!
+                // 2. Chưa trả lời nhưng trạm đã hết lượt (0/3) -> làm mờ, khóa tương tác
                 // 3. Chưa trả lời và trạm còn lượt -> bình thường
-                if (itemData.isAnsweredCorrect)
+                if (itemData.isAnsweredCorrect || itemData.isAnsweredWrong)
                 {
                     btnObj.SetActive(false);
                 }
-                else if (itemData.isAnsweredWrong || isStationOutOfTries)
+                else if (isStationOutOfTries)
                 {
                     btnObj.SetActive(true);
                     SetButtonOpacity(btn, 0.45f);
@@ -991,53 +1087,87 @@ namespace QuizGame
         }
 
         /// <summary>
-        /// Tạo danh sách ngẫu nhiên số lượng item từ Theme hiện tại của map (có thể trùng item)
+        /// Tạo danh sách item ngẫu nhiên cho trạm từ Theme hiện tại của map (đảm bảo đa dạng các item khác nhau)
         /// </summary>
         private List<StationItemRuntimeData> GenerateRandomItemsForStation(int count)
         {
             List<StationItemRuntimeData> list = new List<StationItemRuntimeData>();
 
-            // Lấy danh sách item từ Theme hiện tại
+            EnsureThemesLoaded();
+
+            // 1. Lấy danh sách item từ Theme hiện tại
             List<ItemSO> candidateItems = new List<ItemSO>();
 
             ThemeSO matchedTheme = null;
-            if (availableThemes != null && currentMap != null)
+            if (availableThemes != null && availableThemes.Count > 0)
             {
-                matchedTheme = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+                if (currentMap != null && !string.IsNullOrEmpty(currentMap.themeId))
+                {
+                    matchedTheme = availableThemes.Find(t => t != null && t.themeId == currentMap.themeId);
+                }
+                if (matchedTheme == null)
+                {
+                    matchedTheme = availableThemes[0];
+                }
             }
 
             if (matchedTheme != null && matchedTheme.themeItems != null && matchedTheme.themeItems.Count > 0)
             {
-                candidateItems.AddRange(matchedTheme.themeItems);
-            }
-            else
-            {
-                // Nếu chưa có ThemeSO, lấy từ dictionary lookup hoặc tạo placeholder
-                foreach (var kvp in itemDataLookup)
+                foreach (var itm in matchedTheme.themeItems)
                 {
-                    if (kvp.Value != null) candidateItems.Add(kvp.Value);
+                    if (itm != null && !candidateItems.Contains(itm)) candidateItems.Add(itm);
                 }
             }
+
+            // 2. Nếu theme chưa có item, lấy từ itemDataLookup
+            if (candidateItems.Count == 0 && itemDataLookup != null)
+            {
+                foreach (var kvp in itemDataLookup)
+                {
+                    if (kvp.Value != null && !candidateItems.Contains(kvp.Value)) candidateItems.Add(kvp.Value);
+                }
+            }
+
+            // 3. Nếu vẫn trống (ví dụ chạy trong BUILD), quét trực tiếp toàn bộ ItemSO đã nạp
+            if (candidateItems.Count == 0)
+            {
+                ItemSO[] allItems = Resources.FindObjectsOfTypeAll<ItemSO>();
+                if (allItems != null && allItems.Length > 0)
+                {
+                    foreach (var itm in allItems)
+                    {
+                        if (itm != null && !candidateItems.Contains(itm)) candidateItems.Add(itm);
+                    }
+                }
+            }
+
+            // 4. Sinh các item cho trạm: tạo pool để phân bổ ĐA DẠNG (tránh tình trạng cả 5 ô đều là bearspray)
+            List<ItemSO> pool = new List<ItemSO>(candidateItems);
 
             for (int i = 0; i < count; i++)
             {
                 StationItemRuntimeData itm = new StationItemRuntimeData();
                 if (candidateItems.Count > 0)
                 {
-                    // Random ngẫu nhiên (cho phép trùng lặp)
-                    ItemSO picked = candidateItems[UnityEngine.Random.Range(0, candidateItems.Count)];
+                    if (pool.Count == 0) pool = new List<ItemSO>(candidateItems);
+                    int rIdx = UnityEngine.Random.Range(0, pool.Count);
+                    ItemSO picked = pool[rIdx];
+                    pool.RemoveAt(rIdx); // Lấy không trùng trong 1 chu kỳ sinh
+
                     itm.itemId = string.IsNullOrEmpty(picked.itemId) ? picked.name : picked.itemId;
-                    itm.displayName = picked.itemName;
+                    itm.displayName = !string.IsNullOrEmpty(picked.itemName) ? picked.itemName : picked.name;
                     itm.icon = picked.icon;
                 }
                 else
                 {
-                    // Fallback nếu không có item nào được định nghĩa
-                    string fbId = (currentMap != null && currentMap.itemIds != null && currentMap.itemIds.Count > 0)
-                        ? currentMap.itemIds[UnityEngine.Random.Range(0, currentMap.itemIds.Count)]
-                        : $"item_{i + 1}";
+                    // Fallback an toàn nếu không tìm thấy bất kỳ ItemSO nào trong asset
+                    string fbId = $"item_{i + 1}";
+                    if (currentMap != null && currentMap.itemIds != null && currentMap.itemIds.Count > 0)
+                    {
+                        fbId = currentMap.itemIds[i % currentMap.itemIds.Count];
+                    }
                     itm.itemId = fbId;
-                    itm.displayName = fbId;
+                    itm.displayName = GetFriendlyItemName(fbId);
                     itm.icon = null;
                 }
 
@@ -1047,6 +1177,19 @@ namespace QuizGame
             }
 
             return list;
+        }
+
+        public static string GetFriendlyItemName(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return "Vật Phẩm";
+            string norm = key.Trim().ToLowerInvariant().Replace("item_", "").Replace("_", "");
+            if (norm.Contains("bearspray") || norm.Contains("spray")) return "Bình xịt cay";
+            if (norm.Contains("meat") || norm.Contains("thit")) return "Thịt";
+            if (norm.Contains("campfire") || norm.Contains("camfire") || norm.Contains("lua")) return "Lửa trại";
+            if (norm.Contains("snowanchor") || norm.Contains("anchor") || norm.Contains("neo")) return "Dây neo tuyết";
+            if (norm.Contains("tent") || norm.Contains("leu")) return "Lều cứu sinh";
+            if (norm.Contains("flare") || norm.Contains("phao")) return "Pháo sáng";
+            return key;
         }
 
         /// <summary>
@@ -1148,12 +1291,15 @@ namespace QuizGame
             if (timeText != null)
             {
                 timeText.text = Mathf.CeilToInt(currentTimeLeft).ToString();
+                timeText.color = (currentTimeLeft <= 3.05f) ? timeWarningColor : defaultTimeTextColor;
             }
             if (timerCoroutine != null) StopCoroutine(timerCoroutine);
             timerCoroutine = StartCoroutine(CountdownRoutine());
         }
 
         private Color defaultButtonColor = Color.white;
+        private Color defaultTimeTextColor = Color.white;
+        private Color timeWarningColor = new Color(0.95f, 0.25f, 0.25f, 1f); // Màu đỏ khi thời gian <= 3s
         private Color selectedHighlightColor = new Color(0, 0.9f, 1f, 1f); // Màu xanh dương nhạt khi đang chọn
         private Color correctColor = new Color(0.2f, 0.85f, 0.3f, 1f);          // Màu xanh lá khi đúng
         private Color wrongColor = new Color(0.95f, 0.28f, 0.28f, 1f);          // Màu đỏ khi sai
@@ -1166,6 +1312,16 @@ namespace QuizGame
                 if (timeText != null)
                 {
                     timeText.text = Mathf.CeilToInt(currentTimeLeft).ToString();
+
+                    // Khi thời gian đếm ngược còn <= 3 giây -> đổi màu text sang đỏ
+                    if (currentTimeLeft <= 3.05f)
+                    {
+                        timeText.color = timeWarningColor;
+                    }
+                    else
+                    {
+                        timeText.color = defaultTimeTextColor;
+                    }
                 }
 
                 yield return new WaitForSeconds(1f);
@@ -1173,7 +1329,11 @@ namespace QuizGame
             }
 
             // Hết giờ
-            if (timeText != null) timeText.text = "0";
+            if (timeText != null)
+            {
+                timeText.text = "0";
+                timeText.color = timeWarningColor;
+            }
             StartCoroutine(OnQuestionEndRoutine());
         }
 
@@ -1187,7 +1347,11 @@ namespace QuizGame
             if (currentTimeLeft > 3f)
             {
                 currentTimeLeft = 3f;
-                if (timeText != null) timeText.text = "3";
+                if (timeText != null)
+                {
+                    timeText.text = "3";
+                    timeText.color = timeWarningColor;
+                }
                 Debug.Log("[StationQuizController] Đã bấm SkipTimeBtn: Thời gian giảm còn 3s!");
             }
         }
@@ -1345,9 +1509,10 @@ namespace QuizGame
 
         /// <summary>
         /// Trả lời SAI:
-        /// - Làm mờ nút item đó
+        /// - Tắt bỏ nút item đó (biến mất hoàn toàn, không để mờ)
         /// - Đóng QuestPanel
-        /// - Ghi nhận trạng thái vào bộ nhớ trạm để khi vào lại vẫn làm mờ item này
+        /// - Giảm số lượt còn lại của trạm
+        /// - Ghi nhận trạng thái vào bộ nhớ trạm để khi vào lại vẫn ẩn item này
         /// </summary>
         private void HandleWrongAnswer()
         {
@@ -1358,19 +1523,20 @@ namespace QuizGame
 
             if (currentActiveItemBtn != null)
             {
-                SetButtonOpacity(currentActiveItemBtn, 0.45f);
-                currentActiveItemBtn.interactable = false;
+                currentActiveItemBtn.gameObject.SetActive(false);
+                spawnedItems.Remove(currentActiveItemBtn);
                 currentActiveItemBtn = null;
             }
 
             CloseQuestPanel();
+            ReduceRemainingCount();
             UpdateRemainText();
         }
 
         /// <summary>
         /// Hết thời gian:
+        /// - Tắt bỏ nút item đó (biến mất hoàn toàn, không để mờ)
         /// - Giảm remain còn 2/3
-        /// - Làm mờ nút item
         /// - Ghi nhận trạng thái vào bộ nhớ trạm
         /// </summary>
         private void HandleTimeout()
@@ -1382,8 +1548,8 @@ namespace QuizGame
 
             if (currentActiveItemBtn != null)
             {
-                SetButtonOpacity(currentActiveItemBtn, 0.45f);
-                currentActiveItemBtn.interactable = false;
+                currentActiveItemBtn.gameObject.SetActive(false);
+                spawnedItems.Remove(currentActiveItemBtn);
                 currentActiveItemBtn = null;
             }
 
@@ -1426,10 +1592,17 @@ namespace QuizGame
                 {
                     foreach (var itm in stationItemsState[currentStationIndex])
                     {
-                        if (itm.runtimeBtn != null && !itm.isAnsweredCorrect)
+                        if (itm.runtimeBtn != null)
                         {
-                            SetButtonOpacity(itm.runtimeBtn, 0.45f);
-                            itm.runtimeBtn.interactable = false;
+                            if (itm.isAnsweredCorrect || itm.isAnsweredWrong)
+                            {
+                                itm.runtimeBtn.gameObject.SetActive(false);
+                            }
+                            else
+                            {
+                                SetButtonOpacity(itm.runtimeBtn, 0.45f);
+                                itm.runtimeBtn.interactable = false;
+                            }
                         }
                     }
                 }

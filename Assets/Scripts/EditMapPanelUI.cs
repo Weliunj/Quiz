@@ -37,6 +37,7 @@ namespace QuizGame
 
         [Tooltip("Danh sách ThemeSO tùy chọn cấu hình trong game")]
         [SerializeField] private List<ThemeSO> availableThemes = new List<ThemeSO>();
+        public List<ThemeSO> AvailableThemes => availableThemes;
 
         [Header("--- 2. THANH TAB DỌC (MENU TAB PANEL) ---")]
         [Tooltip("Bảng chứa 3 nút chuyển Tab dọc (MenuTabPanel)")]
@@ -117,6 +118,9 @@ namespace QuizGame
         [Tooltip("Nút xóa câu hỏi đang chọn khỏi map (DeleteQuest)")]
         [SerializeField] private Button deleteBtn;
 
+        [Tooltip("Nút xóa TOÀN BỘ câu hỏi trong map (ClearAllQuestBtn)")]
+        [SerializeField] private Button clearAllQuestBtn;
+
 
 
         [Header("--- 5. ĐIỀU HƯỚNG CHUNG ---")]
@@ -133,14 +137,14 @@ namespace QuizGame
 
         private const string DEFAULT_IMPORT_GUIDE =
             "<b>HƯỚNG DẪN SOẠN FILE CÂU HỎI ĐỂ IMPORT</b>\n\n" +
-            "<b>1. File văn bản (.TXT) — Đánh dấu sao (*) đáp án đúng & cài thời gian:</b>\n" +
-            "Soạn trên Word hoặc Notepad, mỗi câu cách nhau 1 dòng trống. <b>Chỉ cần thêm dấu * trước đáp án đúng</b> (không cần đổi thứ tự câu hỏi hay ghi thêm dòng đáp án!):\n\n" +
-            "<i>  Câu 1: Đỉnh núi Fansipan cao bao nhiêu mét?\n" +
+            "<b>1. File văn bản (.TXT) — Đánh dấu sao (*) hoặc dấu chấm tròn (•) trước đáp án đúng & cài thời gian:</b>\n" +
+            "Soạn trên Word, Notepad hoặc copy trực tiếp từ AI (ChatGPT, Gemini, Claude). Hỗ trợ đánh dấu bằng <b>dấu sao (*)</b> hoặc <b>dấu chấm tròn (•)</b> trước đáp án đúng:\n\n" +
+            "<i>  Câu 1: Tìm x, biết: x - 12 = 25\n" +
             "<b>  Time: 45s</b>\n" +
-            "<b>*  A. 3.143m</b>\n" +
-            "  B. 2.800m\n" +
-            "  C. 3.000m\n" +
-            "  D. 3.500m</i>\n\n" +
+            "  A. x = 13\n" +
+            "<b>• B. x = 37</b>\n" +
+            "  C. x = 32\n" +
+            "  D. x = 38</i>\n\n" +
             "<b>2. File Excel (.CSV):</b>\n" +
             "Soạn theo cột: <i>Câu hỏi, Đáp án A, Đáp án B, Đáp án C, Đáp án D, Đáp án đúng, Thời gian(s)</i>.\n" +
             "Ví dụ: <i>\"Thủ đô của Việt Nam là gì?\", \"Hà Nội*\", \"Huế\", \"Đà Nẵng\", \"TP.HCM\", \"A\", \"15\"</i> (cột thời gian nếu để trống sẽ tự động lấy mặc định 30s).";
@@ -426,11 +430,13 @@ namespace QuizGame
 
                 if (editQuestBtn == null) editQuestBtn = FindButtonFlexible(listQ, "EditQuestBtn", "EditQuest", "EditBtn", "EditButton");
                 if (deleteBtn == null) deleteBtn = FindButtonFlexible(listQ, "DeleteQuest", "DeleteQuestBtn", "DeleteQuestionButton", "DeleteBtn");
+                if (clearAllQuestBtn == null) clearAllQuestBtn = FindButtonFlexible(listQ, "ClearAllQuestBtn", "ClearAllQuest", "ClearAllBtn", "DeleteAllBtn", "DeleteAllQuestBtn", "ClearQuestBtn", "XoaTatCaBtn");
             }
 
             // Dự phòng tìm kiếm trên toàn bảng nếu chưa thấy
             if (editQuestBtn == null) editQuestBtn = FindButtonFlexible(transform, "EditQuestBtn", "EditQuest", "EditBtn", "EditButton");
             if (deleteBtn == null) deleteBtn = FindButtonFlexible(transform, "DeleteQuest", "DeleteQuestBtn", "DeleteQuestionButton", "DeleteBtn");
+            if (clearAllQuestBtn == null) clearAllQuestBtn = FindButtonFlexible(transform, "ClearAllQuestBtn", "ClearAllQuest", "ClearAllBtn", "DeleteAllBtn", "DeleteAllQuestBtn", "ClearQuestBtn", "XoaTatCaBtn");
 
             // Tìm nút Back chung
             if (backBtn == null) backBtn = FindButtonFlexible(transform, "BackBtn", "BackButton", "CloseBtn", "CloseButton");
@@ -579,6 +585,12 @@ namespace QuizGame
             {
                 deleteBtn.onClick.RemoveAllListeners();
                 deleteBtn.onClick.AddListener(OnDeleteClicked);
+            }
+            EnsureClearAllButtonExists();
+            if (clearAllQuestBtn != null)
+            {
+                clearAllQuestBtn.onClick.RemoveAllListeners();
+                clearAllQuestBtn.onClick.AddListener(OnClearAllQuestionsClicked);
             }
             if (backBtn != null)
             {
@@ -1051,6 +1063,7 @@ namespace QuizGame
             // Ban đầu chưa chọn câu hỏi nào -> 2 nút Chỉnh sửa & Xóa bị làm mờ / tắt
             SetButtonState(editQuestBtn, false);
             SetButtonState(deleteBtn, false);
+            SetButtonState(clearAllQuestBtn, currentMap != null && currentMap.questions != null && currentMap.questions.Count > 0);
 
             if (currentMap == null || currentMap.questions == null) return;
 
@@ -1253,6 +1266,57 @@ namespace QuizGame
             RefreshListUI();
         }
 
+        /// <summary>
+        /// Xóa TOÀN BỘ câu hỏi trong danh sách của map hiện tại
+        /// </summary>
+        public void OnClearAllQuestionsClicked()
+        {
+            if (currentMap == null || currentMap.questions == null || currentMap.questions.Count == 0)
+            {
+                Debug.LogWarning("[EditMapPanelUI] Danh sách câu hỏi đang trống, không có gì để xóa!");
+                return;
+            }
+
+            int count = currentMap.questions.Count;
+            currentMap.questions.Clear();
+            Debug.Log($"[EditMapPanelUI] 🗑️ Đã xóa toàn bộ {count} câu hỏi khỏi map '{currentMap.mapName}'!");
+
+            SaveData();
+            ClearInputs();
+            RefreshListUI();
+        }
+
+        /// <summary>
+        /// Tự động sinh nút Xóa tất cả nếu trong Scene chưa có sẵn
+        /// </summary>
+        private void EnsureClearAllButtonExists()
+        {
+            if (clearAllQuestBtn != null || deleteBtn == null) return;
+
+            GameObject clone = Instantiate(deleteBtn.gameObject, deleteBtn.transform.parent);
+            clone.name = "ClearAllQuestBtn";
+            RectTransform rt = clone.GetComponent<RectTransform>();
+            RectTransform delRt = deleteBtn.GetComponent<RectTransform>();
+            if (rt != null && delRt != null)
+            {
+                rt.anchoredPosition = new Vector2(delRt.anchoredPosition.x - 307f, delRt.anchoredPosition.y);
+                rt.sizeDelta = delRt.sizeDelta;
+            }
+
+            clearAllQuestBtn = clone.GetComponent<Button>();
+            TMP_Text text = clone.GetComponentInChildren<TMP_Text>(true);
+            if (text != null)
+            {
+                text.text = "Xóa tất cả";
+            }
+
+            Image img = clone.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = new Color(0.95f, 0.38f, 0.38f, 1f); // Màu đỏ cam nổi bật
+            }
+        }
+
         private void ClearInputs()
         {
             editingQuestion = null;
@@ -1273,6 +1337,7 @@ namespace QuizGame
 
             SetButtonState(editQuestBtn, false);
             SetButtonState(deleteBtn, false);
+            SetButtonState(clearAllQuestBtn, currentMap != null && currentMap.questions != null && currentMap.questions.Count > 0);
         }
 
         private void SaveData()
@@ -1382,21 +1447,21 @@ namespace QuizGame
                         string d = parts[4].Trim();
                         int correct = 0; // Mặc định đáp án đầu tiên (A) là đúng
 
-                        // Kiểm tra nếu có dấu * ở bất kỳ đáp án nào
-                        if (a.StartsWith("*") || a.EndsWith("*")) { correct = 0; }
-                        else if (b.StartsWith("*") || b.EndsWith("*")) { correct = 1; }
-                        else if (c.StartsWith("*") || c.EndsWith("*")) { correct = 2; }
-                        else if (d.StartsWith("*") || d.EndsWith("*")) { correct = 3; }
+                        // Kiểm tra nếu có dấu * hoặc dấu bullet • ở bất kỳ đáp án nào
+                        if (HasMarker(a)) { correct = 0; }
+                        else if (HasMarker(b)) { correct = 1; }
+                        else if (HasMarker(c)) { correct = 2; }
+                        else if (HasMarker(d)) { correct = 3; }
                         else if (parts.Length >= 6 && !string.IsNullOrEmpty(parts[5].Trim()))
                         {
                             correct = ParseAnswerLetterToIndex(parts[5].Trim());
                         }
 
-                        // Xóa dấu * khỏi nội dung text hiển thị
-                        a = a.Trim('*').Trim();
-                        b = b.Trim('*').Trim();
-                        c = c.Trim('*').Trim();
-                        d = d.Trim('*').Trim();
+                        // Xóa các ký tự đánh dấu khỏi nội dung text hiển thị
+                        a = CleanMarker(a);
+                        b = CleanMarker(b);
+                        c = CleanMarker(c);
+                        d = CleanMarker(d);
 
                         float timeLimit = 30f;
                         if (parts.Length >= 7 && float.TryParse(parts[6].Trim().TrimEnd('s', 'S'), out float parsedT))
@@ -1410,20 +1475,22 @@ namespace QuizGame
 
                         if (!string.IsNullOrEmpty(q))
                         {
-                            list.Add(new QuestionData(q, a, b, c, d, correct, timeLimit));
+                            QuestionData qData = new QuestionData(q, a, b, c, d, correct, timeLimit);
+                            SanitizeQuestion(qData);
+                            list.Add(qData);
                         }
                     }
                 }
             }
             else
             {
-                // Xử lý TXT (Chuẩn đề thi giáo viên)
+                // Xử lý TXT (Chuẩn đề thi giáo viên hoặc xuất từ AI)
                 string currentQuestion = "";
                 string optA = "";
                 string optB = "";
                 string optC = "";
                 string optD = "";
-                int correctIdx = 0; // Mặc định đáp án A (đầu tiên) là đúng nếu không có dấu *
+                int correctIdx = 0; // Mặc định đáp án A (đầu tiên) là đúng nếu không có dấu đánh dấu
                 float currentTimeLimit = 30f;
 
                 Action commitQuestion = () =>
@@ -1439,7 +1506,9 @@ namespace QuizGame
                             currentQuestion = currentQuestion.Replace(match.Value, "").Trim();
                         }
 
-                        list.Add(new QuestionData(currentQuestion.Trim(), optA.Trim(), optB.Trim(), optC.Trim(), optD.Trim(), correctIdx, currentTimeLimit));
+                        QuestionData qData = new QuestionData(currentQuestion.Trim(), optA.Trim(), optB.Trim(), optC.Trim(), optD.Trim(), correctIdx, currentTimeLimit);
+                        SanitizeQuestion(qData);
+                        list.Add(qData);
                     }
                     currentQuestion = "";
                     optA = "";
@@ -1483,7 +1552,7 @@ namespace QuizGame
                         continue;
                     }
 
-                    // Kiểm tra các lựa chọn A, B, C, D (hỗ trợ cả viết trên cùng 1 dòng lẫn chia nhiều dòng)
+                    // Kiểm tra các lựa chọn A, B, C, D (hỗ trợ cả viết trên cùng 1 dòng lẫn chia nhiều dòng, hỗ trợ cả dấu bullet •, *, +, -)
                     var optMatches = OptionPattern.Matches(line);
                     if (optMatches.Count > 0)
                     {
@@ -1501,13 +1570,45 @@ namespace QuizGame
                                 if (mStr[c] >= 'A' && mStr[c] <= 'D') { letter = mStr[c]; break; }
                             }
                             int idx = letter - 'A';
-                            bool isStar = mStr.Contains("*") || optContent.StartsWith("*") || optContent.EndsWith("*");
-                            optContent = optContent.Trim('*').Trim();
 
-                            if (idx == 0) { optA = optContent; if (isStar) correctIdx = 0; }
-                            else if (idx == 1) { optB = optContent; if (isStar) correctIdx = 1; }
-                            else if (idx == 2) { optC = optContent; if (isStar) correctIdx = 2; }
-                            else if (idx == 3) { optD = optContent; if (isStar) correctIdx = 3; }
+                            // Kiểm tra xem lựa chọn này có mang dấu hiệu đáp án đúng không:
+                            // 1. Trong chính chuỗi match (ví dụ: *B., •B., B*., B+...)
+                            bool isMarked = mStr.IndexOfAny(CorrectMarkers) >= 0;
+
+                            // 2. Dòng bắt đầu bằng ký tự đánh dấu (ví dụ dòng: • B. x = 37 hoặc - B. x = 37)
+                            if (!isMarked && i == 0 && line.Length > 0)
+                            {
+                                char fc = line[0];
+                                if (Array.IndexOf(CorrectMarkers, fc) >= 0 || fc == '-') isMarked = true;
+                            }
+
+                            // 3. Có ký tự đánh dấu đứng ngay trước vị trí match trong cùng 1 dòng
+                            if (!isMarked && m.Index > 0)
+                            {
+                                string beforeMatch = line.Substring(0, m.Index).TrimEnd();
+                                if (beforeMatch.Length > 0 && Array.IndexOf(CorrectMarkers, beforeMatch[beforeMatch.Length - 1]) >= 0)
+                                {
+                                    isMarked = true;
+                                }
+                            }
+
+                            // 4. Trong chính nội dung đáp án (bắt đầu hoặc kết thúc bằng marker)
+                            string trimmedOpt = optContent.Trim();
+                            if (!isMarked && trimmedOpt.Length > 0)
+                            {
+                                if (Array.IndexOf(CorrectMarkers, trimmedOpt[0]) >= 0 || Array.IndexOf(CorrectMarkers, trimmedOpt[trimmedOpt.Length - 1]) >= 0)
+                                {
+                                    isMarked = true;
+                                }
+                            }
+
+                            // Lọc sạch mọi ký tự đánh dấu khỏi nội dung text hiển thị
+                            optContent = CleanMarker(optContent);
+
+                            if (idx == 0) { optA = optContent; if (isMarked) correctIdx = 0; }
+                            else if (idx == 1) { optB = optContent; if (isMarked) correctIdx = 1; }
+                            else if (idx == 2) { optC = optContent; if (isMarked) correctIdx = 2; }
+                            else if (idx == 3) { optD = optContent; if (isMarked) correctIdx = 3; }
                         }
                         continue;
                     }
@@ -1537,8 +1638,42 @@ namespace QuizGame
             return list;
         }
 
+        public static readonly char[] CorrectMarkers = new char[] { '*', '•', '●', '○', '■', '▪', '▫', '◆', '★', '☆', '✦', '✔', '✓', '√', '►', '▶', '>', '+' };
+
+        private static bool HasMarker(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            string t = s.Trim();
+            if (t.Length == 0) return false;
+            return t.IndexOfAny(CorrectMarkers) >= 0;
+        }
+
+        private static string CleanMarker(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Trim().Trim(CorrectMarkers).Trim();
+        }
+
+        /// <summary>
+        /// Tự động làm sạch các ký tự đánh dấu đáp án đúng còn sót lại trong 4 phương án,
+        /// và tự động đặt correctIndex nếu phát hiện phương án nào có chứa dấu bullet • hoặc *
+        /// </summary>
+        public static void SanitizeQuestion(QuestionData q)
+        {
+            if (q == null) return;
+            if (HasMarker(q.option1)) { q.correctIndex = 0; }
+            else if (HasMarker(q.option2)) { q.correctIndex = 1; }
+            else if (HasMarker(q.option3)) { q.correctIndex = 2; }
+            else if (HasMarker(q.option4)) { q.correctIndex = 3; }
+
+            q.option1 = CleanMarker(q.option1);
+            q.option2 = CleanMarker(q.option2);
+            q.option3 = CleanMarker(q.option3);
+            q.option4 = CleanMarker(q.option4);
+        }
+
         private static readonly System.Text.RegularExpressions.Regex OptionPattern =
-            new System.Text.RegularExpressions.Regex(@"(?i)(?:^|[\s\t])(\*?\s*([A-D])\s*[\.\)\:\-]\s*|\*\s*([A-D])\s*[\.\)\:\-]\s*|([A-D])\*\s*[\.\)\:\-]\s*)");
+            new System.Text.RegularExpressions.Regex(@"(?i)(?:^|[\s\t])([*•●○■▪▫◆★☆✦✔✓√►▶>+\-]?\s*([A-D])\s*[*•●○■▪▫◆★☆✦✔✓√►▶>+\-]?\s*[\.\)\:\-]\s*|([A-D])\s*[*•●○■▪▫◆★☆✦✔✓√►▶>+\-]+\s*[\.\)\:\-]\s*)");
 
         /// <summary>
         /// Tự động sửa các câu hỏi bị lỗi do dồn tất cả đáp án A, B, C, D vào ô option1
@@ -1569,9 +1704,9 @@ namespace QuizGame
                     if (firstLetter != 'A' && firstM.Index > 0)
                     {
                         string prefix = textToParse.Substring(0, firstM.Index).Trim();
-                        bool isStar = prefix.StartsWith("*") || prefix.EndsWith("*");
-                        a = prefix.Trim('*').Trim();
-                        if (isStar) foundCorrect = 0;
+                        bool isMark = HasMarker(prefix);
+                        a = CleanMarker(prefix);
+                        if (isMark) foundCorrect = 0;
                     }
 
                     for (int i = 0; i < matches.Count; i++)
@@ -1588,13 +1723,13 @@ namespace QuizGame
                             if (mStr[k] >= 'A' && mStr[k] <= 'D') { letter = mStr[k]; break; }
                         }
                         int idx = letter - 'A';
-                        bool isStar = mStr.Contains("*") || optContent.StartsWith("*") || optContent.EndsWith("*");
-                        optContent = optContent.Trim('*').Trim();
+                        bool isMark = mStr.IndexOfAny(CorrectMarkers) >= 0 || HasMarker(optContent);
+                        optContent = CleanMarker(optContent);
 
-                        if (idx == 0) { a = optContent; if (isStar) foundCorrect = 0; }
-                        else if (idx == 1) { b = optContent; if (isStar) foundCorrect = 1; }
-                        else if (idx == 2) { c = optContent; if (isStar) foundCorrect = 2; }
-                        else if (idx == 3) { d = optContent; if (isStar) foundCorrect = 3; }
+                        if (idx == 0) { a = optContent; if (isMark) foundCorrect = 0; }
+                        else if (idx == 1) { b = optContent; if (isMark) foundCorrect = 1; }
+                        else if (idx == 2) { c = optContent; if (isMark) foundCorrect = 2; }
+                        else if (idx == 3) { d = optContent; if (isMark) foundCorrect = 3; }
                     }
 
                     int nonEmptyCount = (!string.IsNullOrEmpty(a) ? 1 : 0) +

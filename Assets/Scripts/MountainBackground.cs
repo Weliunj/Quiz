@@ -40,6 +40,7 @@ namespace QuizGame
         public Transform BottomPos => bottomPos;
         public Transform TopPos => topPos;
         public float WidthMarginFactor => widthMarginFactor;
+        public List<ThemeSO> AvailableThemes => availableThemes;
 
         private void Awake()
         {
